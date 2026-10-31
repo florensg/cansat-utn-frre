@@ -2,6 +2,10 @@
 
 Responsable: **Florencia González (ISI 1)**.
 
+Fuente de verdad: **Planificación General v3** (actividad 5.0) y **Elementos del CanSat
+v2** (C-002). Las versiones anteriores de esas planillas están archivadas y no deben
+usarse para definir el controlador.
+
 Este subsistema cubre la computadora de a bordo (OBC), la máquina de estados de misión, la
 telemetría, la persistencia ante reinicios y la lógica de vuelo asociada al descenso.
 
@@ -9,7 +13,9 @@ telemetría, la persistencia ante reinicios y la lógica de vuelo asociada al de
 
 ### Misión principal
 
-- Arquitectura de hardware y software del OBC sobre STM32.
+- Arquitectura de hardware y software del OBC sobre **ESP32-S3 DevKitC-1 de 44 pines**
+  (Elementos v2, C-002). El STM32 C-001 está descartado.
+- Controlador principal de 3.3 V con USB-C, WiFi/BLE y buses I2C/SPI/UART.
 - Definición de sensores, rangos, buses, muestreo y calibración, junto con IEM 3.
 - Máquina de estados de misión y transiciones.
 - Persistencia en FRAM, RTC con respaldo y watchdog.
@@ -52,7 +58,7 @@ telemetría, la persistencia ante reinicios y la lógica de vuelo asociada al de
 ## Arquitectura de software
 
 ```text
-src/main.cpp                  Arranque, scheduler no bloqueante y enlace con HAL
+src/main.cpp                  Arranque, scheduler no bloqueante y enlace con Arduino-ESP32
 lib/flight_core/
   fsm/                        Máquina de estados de misión
   telemetry/                  Armado y formateo de la trama CSV
@@ -60,12 +66,12 @@ lib/flight_core/
   sensors/                    Interfaz de fuentes de datos y calibración
   commands/                   Parser de telecomandos
   flight/                     Detección de apogeo y del 80 % de altura
-include/config.h              Pines, constantes y parámetros de misión
+include/config.h              Placa, pines, constantes y parámetros de misión
 ```
 
 La lógica de `flight_core` es C++ puro, sin dependencias de Arduino, para poder probarla en
 el entorno `native` de PlatformIO. El acceso a hardware queda en `src/main.cpp` y en los
-drivers que se agreguen en la capa HAL.
+drivers que se agreguen en la capa de Arduino-ESP32.
 
 ## Máquina de estados
 
@@ -115,7 +121,7 @@ Mecanismos:
 
 - FRAM MB85RC256V por I2C para el estado persistente.
 - RTC RV-3028-C7 con VBAT para mantener el tiempo de misión.
-- Watchdog independiente IWDG con refresco cooperativo.
+- Task Watchdog Timer (TWDT) del ESP32-S3 con refresco cooperativo y RTC WDT de respaldo.
 - Registro de causa de reinicio para diagnóstico post-vuelo.
 
 ## Detección de apogeo y del 80 %
@@ -144,8 +150,9 @@ El parser y las constantes están en `lib/flight_core/include/flight_core/comman
 
 ## Interfaces pendientes de acordar
 
-- **Con IEM 3 (Juan):** pinout definitivo del STM32, mapa de buses I2C/SPI/UART, pines de
-  liberación, alimentación de sensores y conexión con la radio SX1262.
+- **Con IEM 3 (Juan):** pinout definitivo del ESP32-S3 DevKitC-1 de 44 pines, mapa de
+  buses I2C/SPI/UART, pines de liberación, alimentación de sensores y conexión con la
+  radio SX1262.
 - **Con ISI 2 (Agustín):** trama CSV definitiva, unidades, formato de `OPTIONAL_DATA`,
   comandos y acuse de recibo.
 - **Con IEM 2 (Maximiliano):** señal eléctrica del mecanismo de liberación, tiempos y
@@ -177,7 +184,7 @@ El parser y las constantes están en `lib/flight_core/include/flight_core/comman
 ## Pruebas
 
 ```bash
-cd firmware/obc-stm32
+cd firmware/obc-esp32s3
 pio test -e native
 ```
 

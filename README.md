@@ -32,7 +32,7 @@ Detalle completo en [`docs/00-gestion/participantes.md`](docs/00-gestion/partici
 │   ├── 04-pruebas/             Planes, matrices y evidencias de ensayos
 │   └── 05-pdr/                 Material y checklist de la PDR
 ├── firmware/
-│   ├── obc-stm32/              Software de vuelo del OBC (PlatformIO, C++)
+│   ├── obc-esp32s3/            Software de vuelo del OBC (ESP32-S3, PlatformIO, C++)
 │   └── payload-rpi/            Software de la placa secundaria (Raspberry Pi)
 ├── gcs/                        Estación terrena (recepción, GUI y CSV)
 ├── hardware/                   CAD, Proteus y documentación de hardware
@@ -43,14 +43,21 @@ Detalle completo en [`docs/00-gestion/participantes.md`](docs/00-gestion/partici
 
 ### Software de vuelo (OBC)
 
-Requisitos: [PlatformIO Core](https://platformio.org/install/cli) y toolchain STM32.
+Requisitos: [PlatformIO Core](https://platformio.org/install/cli). El toolchain del
+ESP32-S3 se descarga automáticamente la primera vez.
+
+Controlador seleccionado: **ESP32-S3 DevKitC-1 de 44 pines** (Elementos v2, C-002). El
+STM32 figura como descartado en la misma planilla.
 
 ```bash
-cd firmware/obc-stm32
-pio run                 # compila el firmware para el STM32
-pio run -t upload       # graba el firmware por ST-Link
-pio device monitor      # monitor serie a 115200 baudios
+cd firmware/obc-esp32s3
+pio run                 # compila el firmware para el ESP32-S3
+pio run -t upload       # graba el firmware por USB-C
+pio device monitor      # monitor serie USB CDC a 115200 baudios
 ```
+
+Si la carga no arranca automáticamente, mantener **BOOT**, presionar **RESET** y soltar
+**BOOT**.
 
 Tests de la lógica pura (FSM, telemetría, apogeo y comandos):
 
@@ -99,7 +106,8 @@ Estos archivos deben conservarse en el Drive del equipo o en almacenamiento loca
 ## Estado del proyecto
 
 - Repositorio creado y estructura documental inicial.
-- Software de vuelo: esqueleto de FSM, telemetría, persistencia y detección de apogeo.
+- Software de vuelo migrado a **ESP32-S3 DevKitC-1**: compila para la placa y mantiene
+  los 13 tests nativos.
 - Pendiente de acordar con IEM 3 e ISI 2: pinout definitivo, trama de telemetría y
   protocolo entre el OBC y la placa secundaria.
 

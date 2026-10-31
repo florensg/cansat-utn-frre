@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Wire.h>
 
 #include <cstddef>
 
@@ -87,7 +88,11 @@ void handle_command(const char* line) {
 }  // namespace
 
 void setup() {
+  // Serial es el USB CDC del ESP32-S3 (ARDUINO_USB_CDC_ON_BOOT=1).
+  // La UART de radio/placa secundaria se agrega cuando se cierre el pinout.
   Serial.begin(cansat::kSerialBaud);
+
+  Wire.begin(cansat::kI2cSdaPin, cansat::kI2cSclPin, cansat::kI2cClockHz);
 
   PersistentState restored{};
   if (g_storage.load(restored)) {

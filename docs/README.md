@@ -11,10 +11,10 @@ Planificación, roles y listas de elementos.
 
 - [Participantes y roles](00-gestion/participantes.md)
 - [Decisión: repositorio único privado](00-gestion/decision-repo-bootstrap.md)
-- [Planificación General v3](00-gestion/planificacion-general-v3.xlsx) — versión vigente
-- [Planificación General v2](00-gestion/planificacion-general-v2.xlsx) — versión anterior
-- [Elementos del CanSat](00-gestion/elementos-cansat.xlsx)
-- [Elementos del CanSat v2](00-gestion/elementos-cansat-v2.xlsx)
+- [Decisión: controlador principal ESP32-S3](00-gestion/decision-controlador-esp32s3.md)
+- [Planificación General v3](00-gestion/planificacion-general-v3.xlsx) — **vigente**
+- [Elementos del CanSat v2](00-gestion/elementos-cansat-v2.xlsx) — **vigente**
+- [Versiones anteriores archivadas](00-gestion/archivo/) — solo histórico, no usar
 
 ### 01-requisitos
 
@@ -29,7 +29,8 @@ Bases del certamen, reglamento, Anexo A y requisitos técnicos.
 Arquitectura general, diagramas de sistemas y propuesta de circuito.
 
 - [Diagramas de arquitectura y estados](02-arquitectura/diagramas/)
-- [Propuesta de circuito CanSat](02-arquitectura/propuesta-circuito-cansat.pdf)
+- [Propuesta de circuito CanSat](02-arquitectura/propuesta-circuito-cansat.pdf) — borrador
+  preliminar; el controlador vigente es el ESP32-S3 (Elementos v2, C-002).
 
 ### 03-subsistemas
 

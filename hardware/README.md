@@ -24,6 +24,13 @@ tamaño. Se conserva en el drive del equipo o en almacenamiento local.
 
 Tampoco se versionan los backups automáticos ni los archivos `.workspace.xml` de Proteus.
 
+## Nota sobre el controlador
+
+Los proyectos de Proteus y la propuesta de circuito son material preliminar y pueden
+mostrar el STM32. El controlador vigente es el **ESP32-S3 DevKitC-1 de 44 pines**
+(Elementos v2, C-002); el STM32 (C-001) está descartado. Ver
+[`docs/00-gestion/decision-controlador-esp32s3.md`](../docs/00-gestion/decision-controlador-esp32s3.md).
+
 ## Responsables
 
 - Diseño mecánico y CAD: Luciana Cáceres (IEM 4).

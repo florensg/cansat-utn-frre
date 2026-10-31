@@ -30,6 +30,8 @@ evidencias del proyecto.
 
 ## Evidencias
 
+- [Compilación del firmware ESP32-S3 (2026-10-31)](evidencias/2026-10-31_compilacion-esp32s3.md)
+
 Guardar en `docs/04-pruebas/evidencias/` con el formato:
 
 ```text
@@ -49,7 +51,7 @@ Cada evidencia debe indicar:
 Antes de cada integración se ejecutan:
 
 1. Tests unitarios del entorno nativo.
-2. Compilación del firmware STM32.
+2. Compilación del firmware ESP32-S3.
 3. Prueba de telemetría de 10 minutos.
 4. Prueba de persistencia con reinicio forzado.
 
