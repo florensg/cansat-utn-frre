@@ -1,0 +1,44 @@
+# Sistema operativo y editores
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+*~
+
+# Datos personales: NO versionar
+Documentación/
+Datos Participantes.xlsx
+
+# Material descartado
+Ignorar (Basura)/
+
+# Instaladores y binarios pesados
+*.rar
+Librerias Proteus/Proteus 8.13 SP0 - Samdey Microelectronic.rar
+
+# Backups y workspaces de Proteus
+Librerias Proteus/CanSat/Project Backups/
+hardware/proteus/CanSat/Project Backups/
+*.workspace.xml
+
+# Entornos de Python y caché
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Salidas de compilación
+*.o
+*.elf
+*.bin
+*.hex
+
+# Logs y temporales
+*.log
+*.tmp
+*.bak

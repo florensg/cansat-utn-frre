@@ -1,0 +1,9 @@
+{
+  "name": "flight_core",
+  "version": "0.1.0",
+  "description": "Logica pura de vuelo del OBC CanSat: FSM, telemetria, persistencia, sensores, comandos y deteccion de apogeo",
+  "build": {
+    "srcDir": "src",
+    "includeDir": "include"
+  }
+}

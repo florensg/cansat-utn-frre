@@ -1,0 +1,33 @@
+# Normalización de texto
+* text=auto
+
+# Documentos y binarios de ingeniería
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.rar binary
+*.zip binary
+*.SLDPRT binary
+*.SLDASM binary
+*.SLDDRW binary
+*.pdsprj binary
+*.pdsprj.LAPTOP-*.workspace.xml binary
+
+# Imágenes
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+
+# Código y configuración
+*.c text
+*.h text
+*.cpp text
+*.hpp text
+*.py text
+*.ini text
+*.json text
+*.md text
+*.yml text
+*.yaml text
