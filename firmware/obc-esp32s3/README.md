@@ -43,6 +43,27 @@ La placa se conecta por USB-C. El firmware habilita USB CDC (`ARDUINO_USB_CDC_ON
 por lo que `Serial` aparece como puerto serie del monitor. Si la carga no arranca
 automáticamente, mantener presionado **BOOT**, presionar **RESET** y soltar **BOOT**.
 
+## Simulación sin placa (Wokwi)
+
+Wokwi simula el **ESP32-S3 DevKitC-1**, el USB CDC, I2C, UART y GPIO. El proyecto ya
+incluye `wokwi.toml` y `diagram.json`.
+
+1. Instalar la extensión **Wokwi for VS Code**.
+2. Compilar el firmware:
+
+   ```bash
+   pio run -e obc
+   ```
+
+3. Presionar `F1` y elegir **Wokwi: Start Simulator**.
+4. Abrir el monitor serie y probar los comandos `CX`, `ST`, `CAL` y `MEC`.
+
+La simulación actual permite validar arranque, USB CDC, inicialización de I2C, formato de
+telemetría y parser de comandos. Los sensores siguen siendo `SimulatedSensorSource` y la
+FSM/apogeo todavía no está cableada al `loop()`, así que no reemplaza una prueba de vuelo
+completa. Para eso, el siguiente paso es agregar un perfil de vuelo sintético y conectar
+la FSM al scheduler.
+
 ## Tests
 
 ```bash

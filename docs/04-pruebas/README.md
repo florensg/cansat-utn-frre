@@ -8,6 +8,7 @@ evidencias del proyecto.
 | Nivel | Alcance | Herramienta | Responsable |
 |---|---|---|---|
 | Unitario | Lógica pura de FSM, telemetría, apogeo y comandos | `pio test -e native` | ISI 1 |
+| Simulación | Arranque, USB CDC, I2C, telemetría y comandos | Wokwi (`firmware/obc-esp32s3`) | ISI 1 |
 | Banco | Drivers de sensores, buses I2C/SPI/UART y persistencia | Hardware de laboratorio | ISI 1 + IEM 3 |
 | Integración | OBC + radio + GCS + alimentación | Banco integrado | Todos |
 | Ambiental | Vibración, choque y térmico | Equipamiento del laboratorio | IEM 2 + IEM 4 |
