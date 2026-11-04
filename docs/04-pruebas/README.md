@@ -31,6 +31,7 @@ evidencias del proyecto.
 
 ## Evidencias
 
+- [Simulación interactiva en Wokwi Online y guía de pruebas ESP32-S3 (2026-11-04)](evidencias/2026-11-04_simulacion-wokwi-online-esp32s3.md)
 - [Compilación del firmware ESP32-S3 (2026-10-31)](evidencias/2026-10-31_compilacion-esp32s3.md)
 
 Guardar en `docs/04-pruebas/evidencias/` con el formato:

@@ -36,8 +36,20 @@ constexpr uint32_t kMinFlightTimeMs = 10000;
 // respaldo de ultimo recurso.
 constexpr uint32_t kWatchdogTimeoutMs = 4000;
 
-// Direcciones I2C de los dispositivos persistentes.
+// Direcciones I2C de los dispositivos persistentes y sensores.
 constexpr uint8_t kFramI2cAddress = 0x50;
 constexpr uint8_t kRtcI2cAddress = 0x52;
+constexpr uint8_t kMpu6050I2cAddress = 0x68;
+
+// Pines de banco de pruebas / simulacion visual en Wokwi (ESP32-S3 DevKitC-1).
+// Pendientes de cierre definitivo con IEM 3 para el PCB final.
+constexpr uint8_t kPinAltitudePot = 4;          // Slider analogico de altitud (0 - 500 m)
+constexpr uint8_t kPinLaunchButton = 5;         // Boton de armado / vuelo automatico
+constexpr uint8_t kPinLedLaunchPad = 10;        // LED Azul: Estado LaunchPad (armado)
+constexpr uint8_t kPinLedAscent = 11;           // LED Verde: Estado Ascent
+constexpr uint8_t kPinLedDescent = 12;          // LED Amarillo: Estado Descent (Apogeo)
+constexpr uint8_t kPinLedSecondParachute = 13;  // LED Rojo: 2do Paracaidas (80% alt max)
+constexpr uint8_t kPinLedLanded = 14;           // LED Blanco: Estado Landed
+constexpr uint8_t kPinServoMechanism = 15;      // Servo de liberacion del mecanismo
 
 }  // namespace cansat

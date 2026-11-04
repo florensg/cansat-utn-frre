@@ -43,10 +43,19 @@ La placa se conecta por USB-C. El firmware habilita USB CDC (`ARDUINO_USB_CDC_ON
 por lo que `Serial` aparece como puerto serie del monitor. Si la carga no arranca
 automáticamente, mantener presionado **BOOT**, presionar **RESET** y soltar **BOOT**.
 
-## Simulación sin placa (Wokwi)
+## Simulación sin placa (Wokwi Online y VS Code)
 
-Wokwi simula el **ESP32-S3 DevKitC-1**, el USB CDC, I2C, UART y GPIO. El proyecto ya
-incluye `wokwi.toml` y `diagram.json`.
+El proyecto incluye el circuito interactivo en [`diagram.json`](diagram.json) (con sensor IMU `MPU-6050`, slider de altitud de 0 a 500 m, botón de lanzamiento/simulación, 5 LEDs de estado y servomotor de liberación del 2.º paracaídas) y una versión unificada en [`wokwi_online_sketch.ino`](wokwi_online_sketch.ino) lista para usar en el navegador.
+
+### Opción A: Wokwi Online (en el navegador, sin instalar nada)
+
+1. Abrir [https://wokwi.com/projects/new/esp32-s3](https://wokwi.com/projects/new/esp32-s3).
+2. Pegar el contenido de [`wokwi_online_sketch.ino`](wokwi_online_sketch.ino) en la pestaña `sketch.ino`.
+3. Pegar el contenido de [`diagram.json`](diagram.json) en la pestaña `diagram.json`.
+4. Presionar **Start the simulation** (Play).
+5. Presionar el **Botón Verde (`LANZAR / SIM`)** para ver el vuelo automático completo, mover el slider de altitud o hacer clic en el `MPU-6050`, y probar los comandos `CX`, `ST`, `CAL`, `MEC`, `SIM` y `RST`.
+
+### Opción B: Wokwi for VS Code (local)
 
 1. Instalar la extensión **Wokwi for VS Code**.
 2. Compilar el firmware:
@@ -56,13 +65,10 @@ incluye `wokwi.toml` y `diagram.json`.
    ```
 
 3. Presionar `F1` y elegir **Wokwi: Start Simulator**.
-4. Abrir el monitor serie y probar los comandos `CX`, `ST`, `CAL` y `MEC`.
+4. Abrir el monitor serie y probar los controles visuales y los comandos `CX`, `ST`, `CAL`, `MEC`, `SIM` y `RST`.
 
-La simulación actual permite validar arranque, USB CDC, inicialización de I2C, formato de
-telemetría y parser de comandos. Los sensores siguen siendo `SimulatedSensorSource` y la
-FSM/apogeo todavía no está cableada al `loop()`, así que no reemplaza una prueba de vuelo
-completa. Para eso, el siguiente paso es agregar un perfil de vuelo sintético y conectar
-la FSM al scheduler.
+El detalle completo de pines simulados y casos de prueba está registrado en
+[`docs/04-pruebas/evidencias/2026-11-04_simulacion-wokwi-online-esp32s3.md`](../../docs/04-pruebas/evidencias/2026-11-04_simulacion-wokwi-online-esp32s3.md).
 
 ## Tests
 
