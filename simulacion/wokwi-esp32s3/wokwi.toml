@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = "../../firmware/obc-esp32s3/.pio/build/obc/firmware.bin"
+elf = "../../firmware/obc-esp32s3/.pio/build/obc/firmware.elf"

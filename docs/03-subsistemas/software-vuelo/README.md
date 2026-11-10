@@ -94,7 +94,9 @@ Orden preliminar de columnas, a confirmar con ISI 2 antes de congelar el contrat
 
 ```text
 TEAM_ID,MISSION_TIME_MS,PACKET_COUNT,MODE,STATE,ALT_M,PRESS_PA,TEMP_C,BATT_V,CURR_MA,
-ACC_X,ACC_Y,ACC_Z,GYR_X,GYR_Y,GYR_Z,LAT,LON,GPS_ALT_M,SATS,OPTIONAL_DATA
+ACC_X,ACC_Y,ACC_Z,GYR_X,GYR_Y,GYR_Z,LAT,LON,GPS_ALT_M,SATS,
+MAG_X_UT,MAG_Y_UT,MAG_Z_UT,OPT1,OPT2,OPT3,OPT4,RTC_H,RTC_M,RTC_S,RTC_VALID,GPS_FIX,
+OPTIONAL_DATA
 ```
 
 Reglas:
@@ -102,6 +104,10 @@ Reglas:
 - Un paquete por segundo, generado por un temporizador no bloqueante.
 - `PACKET_COUNT` es acumulativo y sobrevive a los reinicios.
 - `MISSION_TIME_MS` se reconstruye con RTC si el OBC se reinicia.
+- Los campos nuevos (`MAG_*`, `OPT1..OPT4`, `RTC_*`, `GPS_FIX`) se agregaron **antes** de
+  `OPTIONAL_DATA` para conservar el prefijo que valida el test nativo. El cambio de
+  contrato quedó registrado en el vault de Cortex y debe avisarse a ISI 2 antes de que
+  la GCS congele el parser.
 - `OPTIONAL_DATA` transporta los resultados de la misión secundaria y el eco del último
   comando.
 - El formato es ASCII/CSV para que la GCS pueda decodificarlo sin ambigüedad.

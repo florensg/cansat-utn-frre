@@ -1,96 +1,48 @@
 # Software de vuelo del OBC
 
-Firmware del **ESP32-S3 DevKitC-1** para el CanSat. Responsable: Florencia González
-(ISI 1).
-
-La placa está seleccionada como componente **C-002** en
-[`elementos-cansat-v2.xlsx`](../../docs/00-gestion/elementos-cansat-v2.xlsx). El STM32
-(C-001) figura como descartado. La actividad **5.0** de la
-[`planificacion-general-v3.xlsx`](../../docs/00-gestion/planificacion-general-v3.xlsx)
-asigna la arquitectura de hardware y software del microcontrolador principal a ISI 1 e
-IEM 3.
+Firmware del **ESP32-S3 DevKitC-1** (`U1`) para el CanSat, alineado con el circuito definitivo [`PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`](../../PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf). Responsable: Florencia González (ISI 1).
 
 ## Estructura
 
 ```text
-firmware/obc-esp32s3/
-├── platformio.ini          Entornos obc y native
-├── include/config.h        Placa, pines, tiempos y parámetros de misión
-├── src/main.cpp            Arranque, scheduler y enlace con hardware
-├── lib/flight_core/        Lógica pura, sin dependencias de Arduino
-└── test/test_flight_core/  Tests unitarios del entorno native
+firmware/
+├── obc-esp32s3/            Software de vuelo del OBC (ESP32-S3 DevKitC-1)
+│   ├── platformio.ini      Entornos: obc (vuelo) y native (tests unitarios)
+│   ├── include/config.h    Placa, pines, buses I2C/SPI/UART y direcciones v3
+│   ├── src/main.cpp        Drivers v3, scheduler y enlace con RPi/XIAO/XBee
+│   ├── lib/flight_core/    Lógica pura C++ (FSM, apogeo, telemetría, comandos)
+│   └── test/               13 tests unitarios nativos
+├── payload-rpi/            Software de la Raspberry Pi Zero W (LIS3MDL + ADS1115 + UART)
+└── payload-xiao/           Firmware de las 2 cámaras XIAO ESP32-S3 Sense (U8 VIS / U9 NIR)
 ```
 
-## Compilación
+## Mapeo de hardware según `PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`
+
+| Designador | Componente | Interfaz en v3 | Driver en firmware |
+|---|---|---|---|
+| `U1` | `ESP32-S3 DevKitC-1` (44 pines) | Controlador principal | `firmware/obc-esp32s3/src/main.cpp` |
+| `MPU1` | `MPU-6050` | I2C `0x68` + `INT` en `GPIO 14` | `init_mpu6050()` / `read_mpu6050()` |
+| `U2` | `BMP280` | SPI (`SDI=8, SCK=9, CSB=4, SDO=5`) o I2C `0x76/0x77` | `init_barometer()` / `read_barometer()` |
+| `INA1` | `INA219` + `BAT1 3.7V` | I2C `0x40` | `init_ina219()` / `read_ina219()` |
+| `VRAM1` | `FRAM MB85RC256V` | I2C `0x50` (32 KB) | `fram_write_bytes()` / `fram_read_bytes()` (doble copia + CRC) |
+| `U3` | `GPS NEO-M8N` | UART1 (`9600 8N1`) | `poll_gps()` / `parse_nmea_line()` (posición + hora UTC) |
+| `M1` | `Servo SG90` | PWM en `GPIO 7` | `pulse_servo()` |
+| `XBee S1` | Radio 2.4 GHz (`USART1`, `I1=1A`) | UART2 (`115200 8N1`) | Transmisión CSV 1 Hz + recepción de comandos |
+| `RPI1` | `Raspberry Pi Zero W` | I2C (`GPIO 2/3`) + UART (`GPIO 14/15`) | `firmware/payload-rpi/src/main.py` (`$RPI,...`) |
+| `1` | `LIS3MDL` | I2C de RPi (`0x1C`, `INT` en `GPIO 17`) | Leído en RPi (`RpiI2cSensors`) y enviado al OBC (también soportado en I2C directo del OBC) |
+| `ADS1115` + `U4..U7` | `ADS1115` (`0x48`) + 4× `TSL251RD` | `A3..A0` en I2C de RPi (`GPIO 2/3`) | Leído en RPi (`RpiI2cSensors`) y enviado al OBC (también soportado en I2C directo del OBC) |
+| `U8` / `U9` | 2× `XIAO ESP32-S3 Sense` | I2C `D4(SDA)` / `D5(SCL)` (`0x30` VIS, `0x31` NIR) | `firmware/payload-xiao/src/main.cpp` + `trigger_xiao_capture()` |
+
+> **Nota sobre la hora UTC:** En `PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf` se eliminó el módulo RTC externo (`RV1`). El firmware obtiene la hora UTC directamente de las tramas `$GPGGA`/`$GNGGA` del GPS `NEO-M8N` (o del comando `ST HH:MM:SS`) y la mantiene con `millis()`.
+
+## Compilación y carga
 
 ```bash
 pio run -e obc
 ```
 
-El entorno `obc` usa `platform = espressif32` y `board = esp32-s3-devkitc-1`. PlatformIO
-descarga el toolchain la primera vez. La definición por defecto corresponde a la variante
-**N8** (8 MB de flash, sin PSRAM); si la placa entregada es N8R8, ajustar la configuración
-de PSRAM antes de usar ese recurso.
-
-## Grabación y monitor
-
-```bash
-pio run -e obc -t upload
-pio device monitor
-```
-
-La placa se conecta por USB-C. El firmware habilita USB CDC (`ARDUINO_USB_CDC_ON_BOOT=1`),
-por lo que `Serial` aparece como puerto serie del monitor. Si la carga no arranca
-automáticamente, mantener presionado **BOOT**, presionar **RESET** y soltar **BOOT**.
-
-## Simulación sin placa (Wokwi Online y VS Code)
-
-El proyecto incluye el circuito interactivo en [`diagram.json`](diagram.json) (con sensor IMU `MPU-6050`, slider de altitud de 0 a 500 m, botón de lanzamiento/simulación, 5 LEDs de estado y servomotor de liberación del 2.º paracaídas) y una versión unificada en [`wokwi_online_sketch.ino`](wokwi_online_sketch.ino) lista para usar en el navegador.
-
-### Opción A: Wokwi Online (en el navegador, sin instalar nada)
-
-1. Abrir [https://wokwi.com/projects/new/esp32-s3](https://wokwi.com/projects/new/esp32-s3).
-2. Pegar el contenido de [`wokwi_online_sketch.ino`](wokwi_online_sketch.ino) en la pestaña `sketch.ino`.
-3. Pegar el contenido de [`diagram.json`](diagram.json) en la pestaña `diagram.json`.
-4. Presionar **Start the simulation** (Play).
-5. Presionar el **Botón Verde (`LANZAR / SIM`)** para ver el vuelo automático completo, mover el slider de altitud o hacer clic en el `MPU-6050`, y probar los comandos `CX`, `ST`, `CAL`, `MEC`, `SIM` y `RST`.
-
-### Opción B: Wokwi for VS Code (local)
-
-1. Instalar la extensión **Wokwi for VS Code**.
-2. Compilar el firmware:
-
-   ```bash
-   pio run -e obc
-   ```
-
-3. Presionar `F1` y elegir **Wokwi: Start Simulator**.
-4. Abrir el monitor serie y probar los controles visuales y los comandos `CX`, `ST`, `CAL`, `MEC`, `SIM` y `RST`.
-
-El detalle completo de pines simulados y casos de prueba está registrado en
-[`docs/04-pruebas/evidencias/2026-11-04_simulacion-wokwi-online-esp32s3.md`](../../docs/04-pruebas/evidencias/2026-11-04_simulacion-wokwi-online-esp32s3.md).
-
-## Tests
+## Tests unitarios
 
 ```bash
 pio test -e native
 ```
-
-Los tests cubren:
-
-- Transiciones válidas e inválidas de la FSM.
-- Formateo y truncado de la trama de telemetría.
-- Detección de apogeo y del 80 % de altura.
-- Parser de comandos `CX`, `ST`, `CAL` y `MEC`.
-- Persistencia y checksum del estado.
-
-## Integración pendiente
-
-- Reemplazar `SimulatedSensorSource` por los drivers reales de I2C, SPI y UART.
-- Reemplazar `MemoryStorage` por el driver de FRAM MB85RC256V.
-- Configurar el RTC RV-3028-C7, el Task Watchdog Timer (TWDT) y la causa de reinicio.
-- Acordar el pinout definitivo del DevKitC-1 de 44 pines y la trama con IEM 3 e ISI 2.
-- Definir la UART de la radio y de la placa secundaria; el USB CDC queda para consola.
-
-La documentación funcional está en
-[`docs/03-subsistemas/software-vuelo/README.md`](../../docs/03-subsistemas/software-vuelo/README.md).

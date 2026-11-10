@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Guía del Software del CanSat — Cómo funciona la programación</title>
+  <style>
+    :root {
+      --navy: #14386b;
+      --blue-bar: #2e8cd9;
+      --title-blue: #14407a;
+      --text-dark: #262e38;
+      --text-muted: #666e7a;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px 0 40px 0;
+      background: #e2e8f0;
+      font-family: Helvetica, Arial, sans-serif;
+      color: var(--text-dark);
+    }
+
+    /* Hoja A4 */
+    .page {
+      width: 210mm;
+      height: 297mm;
+      background: #ffffff;
+      margin: 0 auto 24px auto;
+      position: relative;
+      box-shadow: 0 6px 24px rgba(15, 23, 42, 0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Cabecera institucional azul */
+    .page-header {
+      background: var(--navy);
+      color: #ffffff;
+      padding: 13px 26px 11px 26px;
+      border-bottom: 4px solid var(--blue-bar);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header-main h1 {
+      margin: 0 0 3px 0;
+      font-size: 16.5px;
+      letter-spacing: 0.2px;
+      text-transform: uppercase;
+    }
+    .header-main p {
+      margin: 0;
+      font-size: 11.4px;
+      color: #d1e6fa;
+    }
+    .header-right {
+      text-align: right;
+      font-size: 10.8px;
+      line-height: 1.35;
+      color: #d9ebff;
+    }
+    .header-right strong {
+      font-size: 11.4px;
+      color: #ffffff;
+      display: block;
+    }
+
+    /* Contenido interno de cada pagina */
+    .page-body {
+      flex: 1;
+      padding: 13px 26px 34px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Pie de pagina */
+    .page-footer {
+      position: absolute;
+      bottom: 9px;
+      left: 26px;
+      right: 26px;
+      border-top: 1px solid #bfc7d1;
+      padding-top: 5px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.2px;
+      color: var(--text-muted);
+    }
+    .page-footer strong {
+      color: #3b4759;
+    }
+
+    /* Titulos de seccion */
+    .section-title {
+      margin: 2px 0 0 0;
+      font-size: 13.6px;
+      font-weight: 700;
+      color: var(--title-blue);
+    }
+
+    .intro-text {
+      margin: 0;
+      font-size: 11.2px;
+      line-height: 1.38;
+    }
+
+    /* Recuadros / Tarjetas con colores */
+    .card {
+      border-radius: 5px;
+      padding: 9px 13px;
+      font-size: 11px;
+      line-height: 1.38;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+    .card h3 {
+      margin: 0 0 4px 0;
+      font-size: 11.9px;
+    }
+    .card p {
+      margin: 0 0 4px 0;
+    }
+    .card ul {
+      margin: 3px 0 0 0;
+      padding-left: 16px;
+    }
+    .card li {
+      margin-bottom: 3px;
+    }
+
+    /* Tarjetas con barra de titulo rellena */
+    .banner-card {
+      border-radius: 5px;
+      overflow: hidden;
+      font-size: 10.9px;
+      line-height: 1.36;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+    .banner-card .banner-title {
+      padding: 6px 11px;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 11.3px;
+    }
+    .banner-card .banner-content {
+      padding: 8px 11px;
+    }
+    .banner-card p {
+      margin: 0 0 4px 0;
+    }
+    .banner-card ul {
+      margin: 0;
+      padding-left: 15px;
+    }
+    .banner-card li {
+      margin-bottom: 3px;
+    }
+
+    /* Variantes de color */
+    .theme-blue {
+      background: #f0f7ff;
+      border: 1.5px solid #3380cc;
+    }
+    .theme-blue h3 { color: #14407a; }
+    .theme-blue .banner-title { background: #2673bf; }
+
+    .theme-green {
+      background: #f5fcf7;
+      border: 1.5px solid #2e9459;
+    }
+    .theme-green h3 { color: #1f7340; }
+    .theme-green .banner-title { background: #2e9459; }
+
+    .theme-orange {
+      background: #fffaf0;
+      border: 1.5px solid #cc731f;
+    }
+    .theme-orange h3 { color: #9c4d08; }
+    .theme-orange .banner-title { background: #cc731f; }
+
+    .theme-yellow {
+      background: #fcf8e6;
+      border: 1.5px solid #bf9926;
+    }
+    .theme-yellow h3 { color: #8c660d; }
+    .theme-yellow .banner-title { background: #b38614; }
+
+    .theme-red {
+      background: #fcf2f2;
+      border: 1.5px solid #bf4040;
+    }
+    .theme-red h3 { color: #ad2626; }
+    .theme-red .banner-title { background: #b33636; }
+
+    .theme-purple {
+      background: #f5f2fc;
+      border: 1.5px solid #734da6;
+    }
+    .theme-purple h3 { color: #5c388c; }
+    .theme-purple .banner-title { background: #734da6; }
+
+    .theme-gray {
+      background: #f6f8fa;
+      border: 1.5px solid #9aa6b8;
+    }
+    .theme-gray h3 { color: #1f406e; }
+
+    /* Grillas */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    /* Mapa de comunicacion interconectado con flechas */
+    .flow-map {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr 115px 1.15fr 115px 1fr;
+      align-items: center;
+      gap: 4px;
+    }
+    .flow-box {
+      background: #ffffff;
+      border-radius: 5px;
+      padding: 8px 10px;
+      font-size: 10.3px;
+      line-height: 1.34;
+      height: 100%;
+    }
+    .flow-box strong {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+    .flow-box ul {
+      margin: 0;
+      padding-left: 14px;
+    }
+    .flow-box li {
+      margin-bottom: 2px;
+    }
+    .flow-center {
+      background: #14386b;
+      border: 2px solid #2e8cd9;
+      color: #ffffff;
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 10.4px;
+      line-height: 1.35;
+      height: 100%;
+    }
+    .flow-center strong {
+      display: block;
+      font-size: 11.4px;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .flow-center ul {
+      margin: 0;
+      padding-left: 14px;
+      color: #e0f2fe;
+    }
+    .flow-arrow-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      padding: 0 2px;
+    }
+    .arrow-pill {
+      font-size: 9.4px;
+      line-height: 1.2;
+      font-weight: 700;
+      padding: 4px 6px;
+      border-radius: 4px;
+      width: 100%;
+    }
+    .arrow-orange {
+      background: #ffedd5;
+      color: #9a3412;
+      border: 1px solid #fdba74;
+    }
+    .arrow-green {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+    }
+    .arrow-blue {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+    }
+
+    /* Pasos encadenados para el algoritmo del 80% */
+    .steps-chain {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .step-item {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      background: #f0f7ff;
+      border: 1.5px solid #3380cc;
+      border-radius: 5px;
+      overflow: hidden;
+      font-size: 10.8px;
+      line-height: 1.35;
+    }
+    .step-badge {
+      background: #1f59a6;
+      color: #ffffff;
+      font-weight: 700;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      font-size: 10.9px;
+    }
+    .step-body {
+      padding: 7px 12px;
+    }
+
+    /* Tabla de modulos del software */
+    .sensor-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+    }
+    .sensor-table th {
+      background: #1f5294;
+      color: #ffffff;
+      text-align: left;
+      padding: 5.5px 8px;
+      font-size: 10.7px;
+    }
+    .sensor-table td {
+      padding: 5px 8px;
+      border: 1px solid #d1d9e6;
+      vertical-align: top;
+      line-height: 1.34;
+    }
+    .sensor-table tr:nth-child(even) td {
+      background: #f0f7ff;
+    }
+    .sensor-table tr:nth-child(odd) td {
+      background: #ffffff;
+    }
+    .sensor-table td:first-child {
+      font-weight: 700;
+      color: #194073;
+    }
+
+    /* Reglas de impresion / exportar a PDF */
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0;
+      }
+      .page {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+      }
+      .page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PÁGINA 1 ==================== -->
+  <section class="page">
+    <header class="page-header">
+      <div class="header-main">
+        <h1>CÓMO ESTÁ ESTRUCTURADO EL SOFTWARE DEL CANSAT</h1>
+        <p>Guía del código explicada de forma simple para los integrantes del equipo</p>
+      </div>
+      <div class="header-right">
+        <strong>SOFTWARE DE VUELO (ISI 1)</strong>
+        <span>Guía de Código para el Equipo</span>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="card theme-blue">
+        <h3>1. ¿Cómo está dividido el software dentro del proyecto?</h3>
+        <p style="margin-bottom:0;">El software del CanSat se divide en <strong>2 programas principales</strong> que trabajan en simultáneo (uno en cada computadora de a bordo), acompañados por un pequeño controlador auxiliar dentro de las cámaras para guardar las fotos en sus tarjetas microSD:</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="banner-card theme-blue">
+          <div class="banner-title">1) Programa de Misión Principal (Placa ESP32-S3)</div>
+          <div class="banner-content">
+            <p><strong>Es el software del Piloto Principal (escrito en C++) y se organiza en 3 partes:</strong></p>
+            <ul>
+              <li><strong>Panel de Configuración:</strong> Donde están definidos los pines de conexión y los valores fijos (como el 80% de altura o los 100 m de seguridad).</li>
+              <li><strong>Núcleo Lógico de Vuelo:</strong> Contiene las reglas que deciden en qué etapa está la misión, cuándo se alcanzó el apogeo y cómo armar la tabla de datos.</li>
+              <li><strong>Coordinador de Hardware:</strong> Lee los sensores primarios, mueve el motor servo del 2° paracaídas, les da la orden de grabación a las <strong>cámaras (U8 y U9)</strong> y transmite por radio a Tierra.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="banner-card theme-green">
+          <div class="banner-title">2) Programa de Misión Secundaria (Placa Raspberry Pi Zero 2W)</div>
+          <div class="banner-content">
+            <p><strong>Es el software científico (escrito en Python) y se organiza en 3 módulos:</strong></p>
+            <ul>
+              <li><strong>Calculador de Orientación 3D:</strong> Lee la brújula y los 4 sensores solares para determinar hacia dónde apunta y gira el CanSat en el aire.</li>
+              <li><strong>Capturador de Cámara Infrarroja:</strong> Dispara fotos hacia el suelo cada 2 segundos durante el ascenso y el descenso.</li>
+              <li><strong>Evaluador de Terreno:</strong> Analiza cada imagen infrarroja y la inclinación para clasificar el suelo e indicar si la zona abajo es <strong>APTA o NO APTA para aterrizar</strong>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">2. ¿Cómo "piensa" el programa principal? Las dos fases de ejecución</h2>
+      <p class="intro-text">En las placas electrónicas el código no se lee una sola vez de arriba hacia abajo y se apaga, sino que está dividido en <strong>dos grandes bloques</strong>:</p>
+
+      <div class="grid-2">
+        <div class="card theme-purple">
+          <h3>A) Etapa de Preparación Inicial (Al encender la placa)</h3>
+          <p><strong>Se ejecuta una única vez apenas conectamos la batería.</strong> Hace el chequeo general antes de despegar:</p>
+          <ul>
+            <li><strong>1. Abre los canales de comunicación:</strong> Habilita las líneas por donde va a hablar con los sensores, el GPS, la radio XBee y la Raspberry Pi.</li>
+            <li><strong>2. Pasa lista de sensores:</strong> Saluda uno por uno al barómetro, acelerómetro, medidor de batería, memoria y cámaras para verificar cuáles están conectados y sanos.</li>
+            <li><strong>3. Toma la presión del suelo:</strong> Guarda la presión del aire en el piso para usarla como "Altura 0 metros".</li>
+            <li><strong>4. Revisa la memoria anti-apagones:</strong> Comprueba si recién lo encendemos en la rampa o si viene de un reinicio en el aire.</li>
+          </ul>
+        </div>
+
+        <div class="card theme-green">
+          <h3>B) Ciclo Continuo de Vuelo (Durante toda la misión)</h3>
+          <p><strong>Se repite en círculo miles de veces por segundo sin parar.</strong> En cada vuelta sigue estos 5 pasos en orden:</p>
+          <ul>
+            <li><strong>Paso 1 (Leer):</strong> Recoge las mediciones nuevas de altura, aceleración, batería, GPS y los datos que envía la Raspberry Pi.</li>
+            <li><strong>Paso 2 (Unificar):</strong> Guarda todas esas lecturas juntas en una "ficha central" del estado actual del satélite.</li>
+            <li><strong>Paso 3 (Decidir):</strong> Evalúa si con la nueva altura corresponde cambiar de etapa de vuelo o destrabar el 2° paracaídas.</li>
+            <li><strong>Paso 4 (Actuar):</strong> Mantiene firme la posición del motor servo (cerrado o abierto) y escucha si llegó alguna orden desde Tierra.</li>
+            <li><strong>Paso 5 (Transmitir cada 1 seg):</strong> Cuando el cronómetro cumple 1 segundo, envía el paquete de datos por radio y guarda copia en memoria.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2 class="section-title">3. Mapa de comunicación: ¿Cómo se conectan las 2 placas principales y las cámaras?</h2>
+
+      <div class="flow-map">
+        <!-- Recuadro Izquierdo: Camaras -->
+        <div class="flow-box" style="border: 1.5px solid #cc731f;">
+          <strong style="color:#9c4d08;">Periféricos de Cámara (U8 y U9)</strong>
+          <ul>
+            <li><strong>Cámara Cenit (U8) y Nadir (U9):</strong> Escuchan los avisos del Piloto.</li>
+            <li>Durante el ascenso y descenso sacan fotos automáticamente cada 2 seg y las guardan en su microSD.</li>
+            <li>Al aterrizar, detienen la grabación.</li>
+          </ul>
+        </div>
+
+        <!-- Flechas Izquierda <-> Centro -->
+        <div class="flow-arrow-col">
+          <div class="arrow-pill arrow-orange">
+            ◄── Ordena grabar:<br>"Ascenso", "Apogeo",<br>"2° Paracaídas" o "Fin"
+          </div>
+          <div class="arrow-pill arrow-blue">
+            ──► Confirma:<br>Cantidad de fotos<br>guardadas en SD
+          </div>
+        </div>
+
+        <!-- Recuadro Central: Piloto -->
+        <div class="flow-center">
+          <strong>Placa 1: Piloto Principal (ESP32-S3)</strong>
+          <ul>
+            <li>Reúne los datos de sus propios sensores y los que le manda la Raspberry Pi.</li>
+            <li>Controla las 4 etapas de la misión, el servo del 2° paracaídas (al 80%) y las cámaras.</li>
+            <li>Arma el paquete final de datos que baja por radio a Tierra cada 1 segundo.</li>
+          </ul>
+        </div>
+
+        <!-- Flechas Centro <-> Derecha -->
+        <div class="flow-arrow-col">
+          <div class="arrow-pill arrow-blue">
+            ──► Envía cada 1 s:<br>Etapa actual, Altura,<br>Acelerómetro y GPS
+          </div>
+          <div class="arrow-pill arrow-green">
+            ◄── Devuelve:<br>Ángulos 3D, Brújula,<br>Sol y si la zona es APTA
+          </div>
+        </div>
+
+        <!-- Recuadro Derecho: Raspberry Pi -->
+        <div class="flow-box" style="border: 1.5px solid #2e9459;">
+          <strong style="color:#1f7340;">Placa 2: Misión Secundaria (RPi)</strong>
+          <ul>
+            <li><strong>Calculador de Actitud:</strong> Combina el acelerómetro del Piloto con su brújula y sensores solares.</li>
+            <li><strong>Clasificador de Suelo:</strong> Toma fotos infrarrojas y evalúa si el terreno es apto para aterrizar.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card theme-yellow">
+        <h3>4. ¿Por qué el código nunca usa "pausas de espera"? (Diseño sin bloqueos)</h3>
+        <p style="margin-bottom:0;">Si para enviar datos cada 1 segundo el programa hiciera una "pausa de 1 segundo", durante ese tiempo el procesador quedaría sordo y ciego (no mediría la altura ni abriría el paracaídas). Por eso lo programamos con un <strong>cronómetro continuo</strong>: el ciclo sigue dando miles de vueltas por segundo midiendo la altura y vigilando el paracaídas, y solo cuando mira el reloj y ve que ya pasó 1 segundo completo, dispara el mensaje de radio sin detener el vuelo.</p>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>CanSat UTN FRRe — Guía explicativa del funcionamiento del código para el equipo</span>
+      <strong>Página 1 de 4</strong>
+    </footer>
+  </section>
+
+  <!-- ==================== PÁGINA 2 ==================== -->
+  <section class="page">
+    <header class="page-header">
+      <div class="header-main">
+        <h1>CÓMO TOMA DECISIONES EL CÓDIGO: ETAPAS Y APERTURA AL 80%</h1>
+        <p>Explicación de las reglas lógicas programadas para controlar el vuelo y el segundo paracaídas</p>
+      </div>
+      <div class="header-right">
+        <strong>SOFTWARE DE VUELO (ISI 1)</strong>
+        <span>Guía de Código para el Equipo</span>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <h2 class="section-title">1. El Controlador de Etapas de Vuelo (Cómo evita el código confundirse de fase)</h2>
+      <p class="intro-text">Para que el CanSat no intente abrir el paracaídas estando en el suelo ni apague las cámaras antes de tiempo, programamos un <strong>Controlador de Etapas</strong> que funciona como una escalera de un solo sentido: solo permite avanzar al siguiente escalón cuando se cumple una condición física comprobada:</p>
+
+      <div class="grid-4">
+        <div class="banner-card theme-blue">
+          <div class="banner-title" style="font-size:10.3px; padding:5px 8px;">Etapa 1: En Rampa</div>
+          <div class="banner-content" style="padding:7px 8px; font-size:10.2px;">
+            <ul>
+              <li>Es el estado inicial al prender.</li>
+              <li>Mantiene el motor del paracaídas cerrado.</li>
+              <li><strong>Regla para avanzar:</strong> Cuando la altura supera los <strong>15 metros</strong>, pasa a Ascenso.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="banner-card theme-green">
+          <div class="banner-title" style="font-size:10.3px; padding:5px 8px;">Etapa 2: Ascenso</div>
+          <div class="banner-content" style="padding:7px 8px; font-size:10.2px;">
+            <ul>
+              <li>Guarda la hora exacta del despegue.</li>
+              <li>Envía a Tierra el aviso automático de inicio de misión.</li>
+              <li>Les avisa a las cámaras que empiecen a grabar.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="banner-card theme-orange">
+          <div class="banner-title" style="font-size:10.3px; padding:5px 8px;">Etapa 3: Descenso</div>
+          <div class="banner-content" style="padding:7px 8px; font-size:10.2px;">
+            <ul>
+              <li>Entra apenas el Detector de Apogeo confirma que empezó a caer.</li>
+              <li>Activa la toma de fotos cada 2 segundos hacia el suelo.</li>
+              <li>Vigila la llegada al 80% de la altura máxima.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="banner-card theme-purple">
+          <div class="banner-title" style="font-size:10.3px; padding:5px 8px;">Etapa 4: Aterrizado</div>
+          <div class="banner-content" style="padding:7px 8px; font-size:10.2px;">
+            <ul>
+              <li><strong>Regla para avanzar:</strong> Estar en Descenso y bajar a <strong>menos de 5 metros</strong>.</li>
+              <li>Les ordena a las cámaras dejar de sacar fotos para cuidar las tarjetas SD.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">2. ¿Cómo funciona por dentro el módulo que calcula el Apogeo y el 80%?</h2>
+      <p class="intro-text">Como no sabemos de antemano a qué altura exacta llegará el cohete el día del lanzamiento, programamos un módulo dedicado que evalúa cada nueva medición de altura pasando por <strong>5 filtros en orden</strong>:</p>
+
+      <div class="steps-chain">
+        <div class="step-item">
+          <div class="step-badge">Filtro 1: Reloj de Seguridad</div>
+          <div class="step-body">
+            <strong>¿Ya pasaron al menos 10 segundos desde el despegue?</strong> Durante los primeros 10 segundos el cohete sufre fuertes vibraciones y cambios de presión que podrían engañar al sensor. Si todavía no pasaron 10 segundos, el programa ignora la pregunta del apogeo.
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">Filtro 2: Récord de Altura</div>
+          <div class="step-body">
+            <strong>¿La altura actual es mayor que nuestro récord guardado?</strong> Mientras el CanSat sigue subiendo (por ejemplo, pasa de 380 m a 395 m y luego a 410 m), el programa simplemente actualiza su nota mental de <em>"Altura Máxima Alcanzada"</em> y espera la siguiente lectura.
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">Filtro 3: Piso Mínimo</div>
+          <div class="step-body">
+            <strong>¿El récord de altura ya superó los 100 metros?</strong> Este candado evita que el paracaídas se dispare por accidente en tierra si alguien levanta el CanSat con la mano o sube una escalera durante las pruebas.
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">Filtro 4: Caída Confirmada</div>
+          <div class="step-body">
+            <strong>¿Ya bajó al menos 5 metros respecto del récord?</strong> Para no confundir una pequeña fluctuación del aire con la cima del vuelo, el programa espera a ver que la altura haya caído 5 metros reales por debajo del récord (ej. de 400 m a 395 m). En ese instante declara: <strong>¡Llegamos al Apogeo!</strong>
+          </div>
+        </div>
+
+        <div class="step-item">
+          <div class="step-badge">Filtro 5: Disparo al 80%</div>
+          <div class="step-body">
+            <strong>¿La altura actual ya cruzó el 80% de aquel récord?</strong> Con el apogeo confirmado, el código multiplica el récord por 0,80 (si el récord fue 400 m, calcula 320 m). Apenas el altímetro mide 320 m o menos, da la orden de abrir el 2° paracaídas y deja activada una traba lógica para que no vuelva a cerrarse.
+          </div>
+        </div>
+      </div>
+
+      <h2 class="section-title">3. Del cálculo matemático al movimiento físico del motor y pruebas en PC</h2>
+
+      <div class="grid-2">
+        <div class="card theme-orange">
+          <h3>Controlador del Motor Servo (Liberación mecánica):</h3>
+          <ul>
+            <li>El motor SG90 necesita recibir pequeños pulsos eléctricos constantes para mantener su brazo firme en una posición.</li>
+            <li>Mientras la orden del 2° paracaídas está apagada, el código le envía el pulso correspondiente a <strong>0 grados (traba cerrada)</strong>.</li>
+            <li>En el milisegundo en que el Filtro 5 da la orden (o si enviamos el comando manual desde Tierra), cambia el pulso a <strong>90 grados</strong> y suelta el paracaídas.</li>
+          </ul>
+        </div>
+
+        <div class="card theme-green">
+          <h3>Programa de Pruebas Automáticas en PC:</h3>
+          <ul>
+            <li>Dentro del proyecto creamos también un <strong>programa de prueba automática</strong> que corre en la computadora antes de cargar el código al satélite.</li>
+            <li>Este test alimenta al módulo de vuelo con una tabla de alturas simuladas (subiendo hasta 500 m y bajando a 0 m) y verifica que el código detecte el apogeo exactamente a los 495 m y abra el paracaídas exactamente a los 400 m (el 80%).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>CanSat UTN FRRe — Guía explicativa del funcionamiento del código para el equipo</span>
+      <strong>Página 2 de 4</strong>
+    </footer>
+  </section>
+
+  <!-- ==================== PÁGINA 3 ==================== -->
+  <section class="page">
+    <header class="page-header">
+      <div class="header-main">
+        <h1>TRADUCCIÓN DE SENSORES Y PROTECCIÓN CONTRA APAGONES</h1>
+        <p>Cómo el código convierte las señales eléctricas en datos útiles y evita perder la memoria en vuelo</p>
+      </div>
+      <div class="header-right">
+        <strong>SOFTWARE DE VUELO (ISI 1)</strong>
+        <span>Guía de Código para el Equipo</span>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <h2 class="section-title">1. ¿Qué hace cada bloque lector del programa principal?</h2>
+      <p class="intro-text">Los sensores electrónicos no entregan frases listas para leer, sino números binarios en bruto. En el programa del Piloto desarrollamos un bloque traductor para cada componente:</p>
+
+      <table class="sensor-table">
+        <thead>
+          <tr>
+            <th style="width:28%;">Bloque del Programa</th>
+            <th style="width:72%;">Qué trabajo realiza el código con los datos</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Lector de Barómetro y Altímetro</strong><br>(Sensor BMP280)</td>
+            <td>Primero detecta solo por qué cable está conectado el sensor (modo SPI o I2C). Luego lee la temperatura y la presión en bruto, aplica la tabla de calibración propia del chip y usa la fórmula barométrica internacional para calcular cuántos metros subió respecto de la presión que había en la rampa.</td>
+          </tr>
+          <tr>
+            <td><strong>Lector de Movimiento e Inercia</strong><br>(Sensor MPU-6050)</td>
+            <td>Pide de una sola vez los datos de los 3 ejes de aceleración y los 3 ejes de giro. Toma esos números crudos y los divide por la escala del sensor para entregar la fuerza en <strong>gravedades (g)</strong> y la velocidad de rotación en <strong>grados por segundo (°/s)</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>Monitor de Batería y Consumo</strong><br>(Sensor INA219)</td>
+            <td>Lee el voltaje actual de la batería de 3.7 V y mide la pequeña caída de tensión en su resistencia interna para calcular cuántos <strong>miliamperios (mA)</strong> está consumiendo todo el CanSat en ese momento.</td>
+          </tr>
+          <tr>
+            <td><strong>Intérprete de GPS</strong><br>(Módulo NEO-M8N)</td>
+            <td>Recibe letra por letra los mensajes satelitales sin detener el resto del programa. Cuando se completa un renglón válido, separa los datos para extraer la cantidad de satélites, la altura satelital, la hora oficial y convierte las coordenadas del formato náutico (grados y minutos) a grados decimales para el mapa.</td>
+          </tr>
+          <tr>
+            <td><strong>Reloj Interno Inteligente</strong><br>(Sincronizador de Hora)</td>
+            <td>Como en el diseño v3 se quitó el chip de reloj externo para ahorrar espacio, creamos un reloj por software: apenas recibe la hora exacta del GPS (o desde la PC en Tierra), la toma como base y le va sumando cada segundo que marca el cronómetro interno del procesador.</td>
+          </tr>
+          <tr>
+            <td><strong>Receptor de Radio y Raspberry Pi</strong><br>(Puerto Serie Compartido)</td>
+            <td>Escucha los mensajes entrantes y distingue automáticamente quién habla: si el mensaje empieza con la etiqueta de la Raspberry Pi, guarda los datos de actitud y terreno; si es una orden enviada por nosotros desde la PC en Tierra, ejecuta el comando pedido.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="section-title">2. Seguro contra reinicios: ¿Cómo protege el código los datos en la memoria FRAM?</h2>
+
+      <div class="grid-2">
+        <div class="card theme-orange">
+          <h3>Guardado con "Doble Copia Espejo" y Firma Verificadora:</h3>
+          <p>Si por un golpe del cohete la batería se desconecta un milisegundo y el procesador se reinicia en el aire, el código no puede empezar de cero porque perdería la cuenta de paquetes y no sabría cuál fue la altura máxima.</p>
+          <ul>
+            <li>Por eso, cada 1 segundo el módulo de almacenamiento guarda en el chip FRAM una ficha con: <strong>número de paquete, tiempo de misión, etapa actual, calibración de altura y estado del paracaídas</strong>.</li>
+            <li>Para máxima seguridad, el código guarda <strong>dos copias idénticas en dos sectores separados</strong> de la memoria junto con un código verificador (como un sello de control).</li>
+            <li>Si la luz se corta justo cuando estaba escribiendo la primera copia y queda incompleta, al volver a prender el programa detecta que el sello no coincide y recupera todo intacto desde la segunda copia.</li>
+          </ul>
+        </div>
+
+        <div class="card theme-blue">
+          <h3>Armador de la Trama de Telemetría (El mensaje a Tierra):</h3>
+          <p>Un módulo específico se encarga de juntar todos los datos recolectados en el segundo y ordenarlos en un único renglón de texto separado por comas (formato CSV) de <strong>33 columnas fijas</strong>:</p>
+          <ul>
+            <li>Primero ubica los datos de la Misión Principal: equipo, tiempo, número de paquete, etapa, altura, presión, temperatura, batería, acelerómetro, giroscopio y GPS.</li>
+            <li>Luego agrega la brújula, los 4 sensores solares y la hora exacta.</li>
+            <li>En la última columna (datos adicionales) adjunta el récord de altura máxima, el estado del 2° paracaídas, la confirmación del último comando recibido y el resumen de actitud y terreno que le pasó la Raspberry Pi.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card theme-gray">
+        <h3>3. Tolerancia a fallas en vuelo: ¿Qué hace el código si un sensor se desconecta?</h3>
+        <p style="margin-bottom:0;">Cada vez que el programa le pide un dato a un sensor por los cables internos, verifica inmediatamente si el sensor contestó. Si un cable se suelta durante el lanzamiento, el bloque lector <strong>no se queda esperando ni congela al sistema</strong>: marca ese sensor como "no disponible", completa ese casillero con cero para no desarmar la tabla de telemetría, y sigue ejecutando normalmente el resto de las funciones críticas del vuelo.</p>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>CanSat UTN FRRe — Guía explicativa del funcionamiento del código para el equipo</span>
+      <strong>Página 3 de 4</strong>
+    </footer>
+  </section>
+
+  <!-- ==================== PÁGINA 4 ==================== -->
+  <section class="page">
+    <header class="page-header">
+      <div class="header-main">
+        <h1>PROGRAMA DE MISIÓN SECUNDARIA Y CÓDIGO POR INTEGRANTE</h1>
+        <p>Cómo funciona el programa de la Raspberry Pi y cómo se vincula el software con cada miembro del equipo</p>
+      </div>
+      <div class="header-right">
+        <strong>SOFTWARE DE VUELO (ISI 1)</strong>
+        <span>Guía de Código para el Equipo</span>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <h2 class="section-title">1. ¿Cómo funciona por dentro el programa de la Raspberry Pi Zero 2W?</h2>
+      <p class="intro-text">El programa de la Misión Secundaria (escrito en lenguaje Python) trabaja en equipo con el Piloto Principal y realiza tres tareas continuas durante el vuelo:</p>
+
+      <div class="grid-2">
+        <div class="card theme-green">
+          <h3>A) Cálculo de la Orientación 3D (Actitud y Vector Solar)</h3>
+          <ul>
+            <li><strong>1. Recibe datos del Piloto:</strong> Lee por el cable de comunicación la aceleración del CanSat, la altura, el GPS y en qué etapa del vuelo está.</li>
+            <li><strong>2. Lee sus propios sensores:</strong> Consulta su brújula magnética (en 3 ejes) y mide cuánta luz solar recibe cada uno de los 4 fotodiodos ubicados en las caras laterales.</li>
+            <li><strong>3. Fusiona todo matemáticamente:</strong> Combinando la gravedad (acelerómetro), el norte magnético (brújula) y la diferencia de luz entre caras opuestas (fotodiodos), calcula los <strong>3 ángulos de inclinación y giro (Roll, Pitch y Yaw)</strong>, los cuaterniones de orientación y el ángulo hacia donde está el Sol.</li>
+          </ul>
+        </div>
+
+        <div class="card theme-blue">
+          <h3>B) Fotos Infrarrojas y Detección de Zonas de Aterrizaje</h3>
+          <ul>
+            <li><strong>1. Disparo de cámara Nadir:</strong> Cuando ve que el CanSat está en Ascenso o Descenso, toma una foto infrarroja (cámara IMX219 NoIR) cada 2 segundos y la guarda numerada en su tarjeta microSD.</li>
+            <li><strong>2. Análisis automático de la imagen:</strong> El programa examina el brillo infrarrojo promedio de la foto y su nivel de rugosidad (variación de textura), y los cruza con cuán inclinado está el satélite en ese momento.</li>
+            <li><strong>3. Clasificación de terreno:</strong> Según esos valores clasifica el suelo en <em>Pastizal Abierto</em>, <em>Suelo Firme</em>, <em>Vegetación Densa con Obstáculos</em> o <em>Agua/Sombra</em>, calcula un puntaje de seguridad y dictamina si la zona es <strong>APTA o NO APTA para aterrizar</strong>. Todo queda guardado en una planilla en la SD y se envía resumido al Piloto.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2 class="section-title">2. El Software y el Equipo: ¿Qué parte del código corresponde a cada integrante?</h2>
+
+      <div class="banner-card theme-purple">
+        <div class="banner-title">Florencia González (ISI 1) — Desarrollo del Software de Vuelo, Telemetría y Determinación de Actitud</div>
+        <div class="banner-content">
+          <ul>
+            <li><strong>Arquitectura y Programación del Piloto (ESP32-S3):</strong> Desarrollo completo del programa principal de vuelo, el ciclo continuo sin bloqueos, el controlador de las 4 etapas de misión, el algoritmo de detección de apogeo y apertura al 80%, el reloj interno sincronizado, el sistema de doble copia en memoria FRAM contra reinicios y las pruebas automáticas de software.</li>
+            <li><strong>Algoritmos de Actitud 3D y Comunicación entre Placas (Raspberry Pi y Cámaras):</strong> Programación de la fusión matemática entre acelerómetro, brújula y los 4 sensores solares para obtener los ángulos 3D y cuaterniones, además del protocolo de comunicación que coordina al ESP32-S3 con la Raspberry Pi y con las dos cámaras XIAO.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card theme-blue">
+          <h3>Agustín Brites (ISI 2 — Estación Terrena, Datos e Imágenes):</h3>
+          <ul>
+            <li><strong>Recepción de Telemetría y Comandos:</strong> El código del Piloto genera cada 1 segundo la tabla CSV de 33 columnas que recibe su Estación Terrena y procesa los comandos enviados desde la PC (calibrar altura, poner en hora, consultar estado de batería/paneles y activar el servo).</li>
+            <li><strong>Procesamiento de Terreno e Imágenes:</strong> Se integra con el módulo evaluador de zonas aptas de aterrizaje y con la planilla de registro e imágenes guardadas en la Raspberry Pi y en las cámaras XIAO.</li>
+          </ul>
+        </div>
+
+        <div class="card theme-orange">
+          <h3>Juan Pedro López (IEM 3 — Electrónica, Sensores y Radio):</h3>
+          <ul>
+            <li><strong>Configuración de Pines y Conexiones:</strong> El archivo de configuración del código refleja exactamente las conexiones del plano eléctrico v3 (pines del barómetro, bus de datos, GPS, radio XBee y servo).</li>
+            <li><strong>Lectura de Sensores y Antena:</strong> Los bloques lectores del código se encargan de inicializar y traducir las señales de todos los sensores seleccionados y transmitir los paquetes por el módulo de radio.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card theme-green">
+          <h3>Catriel Paz (IEM 1 — Alimentación):</h3>
+          <ul>
+            <li>El código incluye el bloque monitor del sensor INA219 que mide en vivo los voltios de la batería y los miliamperios consumidos.</li>
+            <li>Además, al enviar el comando de consulta desde Tierra, el software reporta el estado energético y la lectura de los 4 sensores solares.</li>
+          </ul>
+        </div>
+
+        <div class="card theme-red">
+          <h3>Maximiliano López (IEM 2 — Recuperación):</h3>
+          <ul>
+            <li>Su sistema mecánico está gobernado en el código por el módulo del 80% de altura y el controlador del motor servo SG90.</li>
+            <li>Si en las pruebas de banco necesitan ajustar el ángulo de giro del brazo del servo, se cambia un único número en el panel de configuración.</li>
+          </ul>
+        </div>
+
+        <div class="card theme-yellow">
+          <h3>Luciana Cáceres (IEM 4 — Estructura):</h3>
+          <ul>
+            <li>El cálculo de actitud en el código usa la ubicación física de los 4 sensores solares en las caras laterales (+X, -X, +Y, -Y) y de los ejes de giro de la estructura.</li>
+            <li>También coordina las cámaras según su ubicación hacia arriba (paracaídas) y hacia abajo (suelo).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <footer class="page-footer">
+      <span>CanSat UTN FRRe — Guía explicativa del funcionamiento del código para el equipo</span>
+      <strong>Página 4 de 4</strong>
+    </footer>
+  </section>
+
+</body>
+</html>

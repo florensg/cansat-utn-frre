@@ -1,0 +1,381 @@
+{
+  "version": 1,
+  "author": "CanSat UTN FRRe - Florencia Gonzalez (ISI 1)",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s3-devkitc-1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {
+        "flashSize": "8"
+      }
+    },
+    {
+      "type": "wokwi-mpu6050",
+      "id": "imu1",
+      "top": 40,
+      "left": -260,
+      "attrs": {}
+    },
+    {
+      "type": "board-bmp180",
+      "id": "baro1",
+      "top": 180,
+      "left": -260,
+      "attrs": {
+        "temperature": "24",
+        "pressure": "101325"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "opt1",
+      "top": -20,
+      "left": -520,
+      "attrs": {
+        "value": "2048"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "opt2",
+      "top": 60,
+      "left": -520,
+      "attrs": {
+        "value": "2048"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "opt3",
+      "top": 140,
+      "left": -520,
+      "attrs": {
+        "value": "2048"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "opt4",
+      "top": 220,
+      "left": -520,
+      "attrs": {
+        "value": "2048"
+      }
+    },
+    {
+      "type": "wokwi-slide-potentiometer",
+      "id": "pot_alt",
+      "top": 420,
+      "left": -300,
+      "attrs": {
+        "travelLength": "30",
+        "value": "0"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_launch",
+      "top": 420,
+      "left": -100,
+      "attrs": {
+        "color": "green",
+        "label": "LANZAR / SIM"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_pad",
+      "top": -30,
+      "left": 180,
+      "attrs": {
+        "color": "blue",
+        "label": "LaunchPad"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_ascent",
+      "top": 25,
+      "left": 180,
+      "attrs": {
+        "color": "green",
+        "label": "Ascent"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_descent",
+      "top": 80,
+      "left": 180,
+      "attrs": {
+        "color": "yellow",
+        "label": "Descent (Apogeo)"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_para2",
+      "top": 135,
+      "left": 180,
+      "attrs": {
+        "color": "red",
+        "label": "2do Paracaidas (80%)"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_landed",
+      "top": 190,
+      "left": 180,
+      "attrs": {
+        "color": "white",
+        "label": "Landed"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_pad",
+      "top": -10,
+      "left": 125,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_ascent",
+      "top": 45,
+      "left": 125,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_descent",
+      "top": 100,
+      "left": 125,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_para2",
+      "top": 155,
+      "left": 125,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r_landed",
+      "top": 210,
+      "left": 125,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "servo_mec",
+      "top": 250,
+      "left": 175,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_imu",
+      "top": -5,
+      "left": -280,
+      "attrs": {
+        "text": "MPU1: MPU-6050 I2C 0x68\nNATIVO (INT en GPIO 14)\nClic para mover accel/giro"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_baro",
+      "top": 135,
+      "left": -280,
+      "attrs": {
+        "text": "U2: BMP180 = stand-in del BMP280\n(En v3: SPI en GPIO 8/9/4 o I2C)\nClic y mover PRESION para volar"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_time",
+      "top": 280,
+      "left": -280,
+      "attrs": {
+        "text": "PROPUESTA v3: Sin RTC externo\nHora UTC sincronizada por GPS\n($GPGGA) / comando ST + millis()"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_opt",
+      "top": -60,
+      "left": -540,
+      "attrs": {
+        "text": "U4..U7: 4x TSL251RD + ADS1115 (0x48)\nEn v3 van a RPi Zero (I2C GPIO 2/3)\nEn Wokwi: 4 potenciometros (GPIO 1/2/3/6)"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_alt",
+      "top": 470,
+      "left": -300,
+      "attrs": {
+        "text": "Slider Altitud: control manual 0-500 m"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_btn",
+      "top": 470,
+      "left": -110,
+      "attrs": {
+        "text": "Boton Verde: vuelo automatico SIM"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_leds",
+      "top": -65,
+      "left": 160,
+      "attrs": {
+        "text": "Estados FSM + Paracaidas (80%)"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_servo",
+      "top": 330,
+      "left": 165,
+      "attrs": {
+        "text": "M1: Servo SG90 (GPIO 7 en v3 / GPIO 15 Wokwi)"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_ina219",
+      "top": -110,
+      "left": 380,
+      "attrs": {
+        "text": "INA1: INA219 0x40 + BAT1 3.7V (v3)\nDriver real; en SIM usa 3.70 V / 185 mA"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_lis3mdl",
+      "top": -30,
+      "left": 380,
+      "attrs": {
+        "text": "LIS3MDL 0x1C (en RPi Zero I2C GPIO 2/3,\nINT en GPIO 17). Enviado al OBC en $RPI,..."
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_fram",
+      "top": 40,
+      "left": 380,
+      "attrs": {
+        "text": "VRAM1: FRAM MB85RC256V 0x50\nDriver real 16-bit con doble copia + CRC"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_gps",
+      "top": 110,
+      "left": 380,
+      "attrs": {
+        "text": "U3: GPS NEO-M8N UART 9600\nParser NMEA real + hora UTC + estimulo SIM"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_xbee",
+      "top": 180,
+      "left": 380,
+      "attrs": {
+        "text": "XBee S1 Module (USART1, I1=1A)\nRecibe telemetria CSV 1 Hz y envia comandos"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_rpi",
+      "top": 250,
+      "left": 380,
+      "attrs": {
+        "text": "RPI1: Raspberry Pi Zero W\nI2C (GPIO 2/3): LIS3MDL + ADS1115\nUART (GPIO 14/15): enlace con OBC"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "txt_xiao",
+      "top": 330,
+      "left": 380,
+      "attrs": {
+        "text": "U8 / U9: 2x XIAO ESP32-S3 (VIS 0x30 / NIR 0x31)\nConectadas en D4(SDA) / D5(SCL) al bus I2C"
+      }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+
+    [ "imu1:VCC", "esp:3V3.2", "red", [ "v0" ] ],
+    [ "imu1:GND", "esp:GND.2", "black", [ "v0" ] ],
+    [ "imu1:SDA", "esp:8", "blue", [ "v0" ] ],
+    [ "imu1:SCL", "esp:9", "gold", [ "v0" ] ],
+
+    [ "baro1:VCC", "esp:3V3.1", "red", [ "v0" ] ],
+    [ "baro1:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "baro1:SDA", "esp:8", "blue", [ "v0" ] ],
+    [ "baro1:SCL", "esp:9", "gold", [ "v0" ] ],
+
+    [ "opt1:VCC", "esp:3V3.2", "red", [ "v0" ] ],
+    [ "opt1:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "opt1:SIG", "esp:1", "purple", [ "v0" ] ],
+
+    [ "opt2:VCC", "esp:3V3.2", "red", [ "v0" ] ],
+    [ "opt2:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "opt2:SIG", "esp:2", "purple", [ "v0" ] ],
+
+    [ "opt3:VCC", "esp:3V3.2", "red", [ "v0" ] ],
+    [ "opt3:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "opt3:SIG", "esp:3", "purple", [ "v0" ] ],
+
+    [ "opt4:VCC", "esp:3V3.2", "red", [ "v0" ] ],
+    [ "opt4:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "opt4:SIG", "esp:6", "purple", [ "v0" ] ],
+
+    [ "pot_alt:VCC", "esp:3V3.1", "red", [ "v0" ] ],
+    [ "pot_alt:GND", "esp:GND.1", "black", [ "v0" ] ],
+    [ "pot_alt:SIG", "esp:4", "purple", [ "v0" ] ],
+
+    [ "btn_launch:1.r", "esp:5", "green", [ "v0" ] ],
+    [ "btn_launch:2.r", "esp:GND.1", "black", [ "v0" ] ],
+
+    [ "esp:10", "r_pad:1", "blue", [ "h0" ] ],
+    [ "r_pad:2", "led_pad:A", "blue", [ "h0" ] ],
+    [ "led_pad:C", "esp:GND.2", "black", [ "v0" ] ],
+
+    [ "esp:11", "r_ascent:1", "green", [ "h0" ] ],
+    [ "r_ascent:2", "led_ascent:A", "green", [ "h0" ] ],
+    [ "led_ascent:C", "esp:GND.2", "black", [ "v0" ] ],
+
+    [ "esp:12", "r_descent:1", "yellow", [ "h0" ] ],
+    [ "r_descent:2", "led_descent:A", "yellow", [ "h0" ] ],
+    [ "led_descent:C", "esp:GND.2", "black", [ "v0" ] ],
+
+    [ "esp:13", "r_para2:1", "red", [ "h0" ] ],
+    [ "r_para2:2", "led_para2:A", "red", [ "h0" ] ],
+    [ "led_para2:C", "esp:GND.2", "black", [ "v0" ] ],
+
+    [ "esp:14", "r_landed:1", "white", [ "h0" ] ],
+    [ "r_landed:2", "led_landed:A", "white", [ "h0" ] ],
+    [ "led_landed:C", "esp:GND.2", "black", [ "v0" ] ],
+
+    [ "servo_mec:V+", "esp:5V", "red", [ "v0" ] ],
+    [ "servo_mec:GND", "esp:GND.3", "black", [ "v0" ] ],
+    [ "servo_mec:PWM", "esp:15", "orange", [ "v0" ] ]
+  ],
+  "serialMonitor": {
+    "display": "always",
+    "newline": "lf"
+  }
+}

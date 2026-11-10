@@ -28,6 +28,19 @@ struct TelemetryFrame {
   float longitude_deg = 0.0f;
   float gps_altitude_m = 0.0f;
   uint8_t satellites = 0;
+  uint8_t gps_fix = 0;
+
+  // Campos agregados para cubrir la Propuesta 2 de circuito. Se insertan
+  // siempre ANTES de optional_data para no romper el prefijo de la trama CSV.
+  float mag_x_ut = 0.0f;
+  float mag_y_ut = 0.0f;
+  float mag_z_ut = 0.0f;
+  uint16_t optical_raw[4] = {0, 0, 0, 0};
+  uint8_t rtc_hour = 0;
+  uint8_t rtc_minute = 0;
+  uint8_t rtc_second = 0;
+  uint8_t rtc_valid = 0;
+
   const char* optional_data = "";
 };
 

@@ -1,82 +1,75 @@
-# Registro y guía: Simulación interactiva en Wokwi Online y coordinación con el equipo (ESP32-S3)
+# Registro y guía: Simulación interactiva en Wokwi Online (`ESP32-S3`, Circuito v3)
 
-- **Fecha:** 2026-11-04
+- **Fecha de creación:** 2026-11-04
+- **Última actualización:** 2026-11-10
 - **Responsable:** Florencia González (`ISI 1` — Software de vuelo, telemetría y determinación de actitud)
 - **Placa simulada:** `ESP32-S3 DevKitC-1` de 44 pines (Elementos v2, `C-002`)
+- **Referencia de hardware:** [`PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`](../../../PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf) y [`Anexo A v2 .pdf`](../../01-requisitos/competencia/v2/Anexo%20A%20v2%20.pdf)
 - **Archivos asociados:**
   - [`firmware/obc-esp32s3/diagram.json`](../../../firmware/obc-esp32s3/diagram.json)
   - [`firmware/obc-esp32s3/wokwi_online_sketch.ino`](../../../firmware/obc-esp32s3/wokwi_online_sketch.ino)
   - [`firmware/obc-esp32s3/include/config.h`](../../../firmware/obc-esp32s3/include/config.h)
   - [`firmware/obc-esp32s3/src/main.cpp`](../../../firmware/obc-esp32s3/src/main.cpp)
+  - [`firmware/payload-rpi/src/main.py`](../../../firmware/payload-rpi/src/main.py)
+  - [`firmware/payload-xiao/src/main.cpp`](../../../firmware/payload-xiao/src/main.cpp)
 
 ---
 
-## 1. Coordinación con integrantes del equipo (Qué compartir con cada rol)
+## 1. Cambios clave incorporados desde `PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`
 
-| Integrante | Rol | Subsistema | Qué compartirle y acordar |
+1. **Eliminación del RTC externo (`RV-3028-C7` / `DS1307`):**
+   - El esquemático v3 eliminó el bloque `RV1`.
+   - Se retiró `rtc1` (`wokwi-ds1307` en `Wire1`) de [`diagram.json`](../../../firmware/obc-esp32s3/diagram.json).
+   - El tiempo UTC (`RTC_H`, `RTC_M`, `RTC_S`, `RTC_VALID`) se mantiene mediante `TimeKeeper`, sincronizado con las sentencias `$GPGGA`/`$GNGGA` del GPS `NEO-M8N` o con el telecomando `ST HH:MM:SS` ($\pm 1\text{ s}$ según requisito **F3** de [`Anexo A v2 .pdf`](../../01-requisitos/competencia/v2/Anexo%20A%20v2%20.pdf)).
+2. **Separación estricta Vuelo (`env:obc`) vs. Simulación (`env:sim` / `CANSAT_SIMULATION`):**
+   - En [`platformio.ini`](../../../firmware/obc-esp32s3/platformio.ini), el entorno `env:obc` compila sin `CANSAT_SIMULATION`: nunca inyecta tramas NMEA sintéticas, no reemplaza el `INA219` con valores fijos ni usa potenciómetros de Wokwi.
+   - El entorno `env:sim` define `-D CANSAT_SIMULATION=1` para pruebas interactivas en Wokwi (`wokwi.toml`).
+3. **Drivers completos de `PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`:**
+   - **FRAM `MB85RC256V` (`0x50`):** Driver I2C real con direccionamiento de 16 bits, doble copia redundante (`0x0000` y `0x0040`) y verificación de checksum (`PersistentState`). Persiste `packet_count`, `mission_time_ms`, `altitude_offset_m`, `state` y `second_parachute_deployed` ante reinicios (**F1, F2, F5**).
+   - **`BMP280` (`U3`):** Autodetección en bus I2C (`0x76`/`0x77`) y bus SPI en `GPIO 8 (SDI/MOSI)`, `GPIO 9 (SCK)`, `GPIO 4 (CSB)` y `GPIO 5 (SDO/MISO)`. En modo simulación soporta además el stand-in `BMP180` (`0x77`).
+   - **`MPU-6050` (`0x68` + `INT` en `GPIO 14`):** Acelerómetro, giroscopio y temperatura.
+   - **`INA219` (`0x40`):** Tensión de batería (`BAT1 = 3.7V`) y corriente (`shunt = 0.1 Ω`).
+   - **`SG90` (`M1`):** Señal PWM de liberación del segundo paracaídas en `GPIO 7` (esquemático v3) y espejo en `GPIO 15` (compatibilidad con arnés/Wokwi).
+   - **`Raspberry Pi Zero W` (`RPI1`):** Lee en su bus I2C1 (`GPIO 2/3`) el magnetómetro `LIS3MDL` (`0x1C`, `INT` en `GPIO 17`) y el `ADS1115` (`0x48`, `U4->A3`, `U5->A2`, `U6->A1`, `U7->A0`), calcula actitud y envía `$RPI,...` por UART (`GPIO 14/15`) al OBC.
+   - **Cámaras `XIAO ESP32-S3 Sense` (`U8` en `0x30` y `U9` en `0x31`):** Esclavos I2C en `D4 (SDA)` / `D5 (SCL)` disparados por el OBC en el lanzamiento (`0x01`), apogeo (`0x02`), 80 % (`0x04`) y aterrizaje (`0x03`), grabando secuencias MJPEG a resolución SVGA (`800x600 >= 640x480`, requisitos **SN6, SN7, C6, C7**).
+
+---
+
+## 2. Cobertura del Circuito v3 en Wokwi (`diagram.json`)
+
+| Bloque de `PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf` | Interfaz en v3 | En Wokwi (`diagram.json`) | Implementación en el firmware |
 |---|---|---|---|
-| **Agustín Brites** | `ISI 2` | Estación terrena (GCS), datos e imágenes | **Par directo de software.** Contrato de la trama CSV a 1 Hz (`TelemetryFrame`), formato del campo `OPTIONAL_DATA` (`MAX:<alt>;P2:<0\|1>;CMD:<eco>`), protocolo de telecomandos (`CX`, `ST`, `CAL`, `MEC`) y reparto de procesamiento con la Raspberry Pi Zero 2 W. |
-| **Juan Pedro López** | `IEM 3` | Electrónica, sensores y RF | **Par principal de hardware.** Migración al `ESP32-S3 DevKitC-1`, validación del pinout en `include/config.h`, buses I2C (`GPIO 8/9`), SPI y UART (radio `SX1262` y enlace RPi), y calibración/fusión de sensores de actitud (`MPU-6050`, `LIS3MDL`, celdas solares `BPW34 + ADS1113`, GPS `NEO-M8`). |
-| **Maximiliano López** | `IEM 2` | Descenso y recuperación | Lógica de `ApogeeDetector` (detección de apogeo con caída $\ge 5\text{ m}$ sobre $100\text{ m}$ y disparo del 2.º paracaídas al **80 % de la altura máxima**), tiempos de guarda ($10\text{ s}$) y señal de actuación del mecanismo (`GPIO 15`). |
-| **Catriel Paz** | `IEM 1` | Sistema de alimentación | Perfiles de consumo por modo de operación, alimentación de $3.3\text{ V}$ del `ESP32-S3` y lectura/umbrales de batería con `INA219`. |
-| **Luciana Cáceres** | `IEM 4` | Mecánica y estructura | Alineación de la terna de ejes mecánicos ($X, Y, Z$) del CAD con los ejes del algoritmo de actitud y montaje de cámaras. |
+| `ESP32-S3 DevKitC-1` (`U1`) | — | **Nativo** (`board-esp32-s3-devkitc-1`) | Placa objetivo real |
+| `MPU-6050` | I2C `0x68`, `INT` en `GPIO 14` | **Nativo** (`wokwi-mpu6050`) | Driver I2C real |
+| `BMP280` (`U3`) | SPI (`GPIO 8/9/4/5`) o I2C (`0x76`) | **Stand-in:** `board-bmp180` (`0x77`) | Driver real `BMP280` (I2C + SPI) + fallback `BMP180` en `CANSAT_SIMULATION` |
+| `INA219` (`U6`) | I2C `0x40` | **Sin parte nativa** | Driver I2C real; estímulo `3.70 V / 185 mA` solo en `CANSAT_SIMULATION` |
+| `MB85RC256V` (FRAM) | I2C `0x50` | **Sin parte nativa** | Driver I2C de 16 bits con doble copia (`0x0000`/`0x0040`) + fallback RAM |
+| `NEO-M8N` (`GPS1`) | UART1 `9600` (`RX 18 / TX 17`) | **Sin parte nativa** | Parser NMEA `$GPGGA`/`$GNGGA` real + sincronización UTC |
+| `SG90` (`M1`) | PWM `GPIO 7` (y `GPIO 15`) | **Nativo** (`wokwi-servo`) | Pulso de `544–2400 µs` en `GPIO 7` y `GPIO 15` (`0°` cerrado, `90°` liberado) |
+| `RPI1` + `LIS3MDL` + `ADS1115` + `U4..U7` | RPi I2C1 (`GPIO 2/3`) + UART (`GPIO 1/2`) | **Stand-in:** 4 potenciómetros `opt1..opt4` o trama `$RPI,...` por serie | Firmware completo en [`firmware/payload-rpi/src/main.py`](../../../firmware/payload-rpi/src/main.py) + parser `$RPI,...` y driver directo `LIS3MDL`/`ADS1115` en OBC |
+| `U8` / `U9` (`2x XIAO ESP32-S3 Sense`) | I2C `0x30` / `0x31` (`D4/D5`) | **Anotadas** | Firmware completo en [`firmware/payload-xiao/src/main.cpp`](../../../firmware/payload-xiao/src/main.cpp) + triggers I2C en OBC |
 
 ---
 
-## 2. Estado del desarrollo de `ISI 1`
+## 3. Contrato de telemetría y telecomandos (`Anexo A v2`)
 
-1. **Lógica nuclear (`flight_core` en C++ puro):**
-   - Máquina de estados (`FlightStateMachine`): `LaunchPad`, `Ascent`, `Descent`, `Landed` con transiciones validadas.
-   - Detector de apogeo y 80 % (`ApogeeDetector`): cálculo de altura máxima, detección de apogeo y disparo único (*latch*) del segundo paracaídas al 80 %.
-   - Formateador de telemetría CSV (`format_telemetry_csv`) a 1 Hz y contador acumulativo de paquetes.
-   - Parser de telecomandos (`parse_command`): `CX`, `ST`, `CAL`, `MEC` (más comandos de banco `SIM` y `RST`).
-   - Persistencia (`PersistentState`): validación con `magic`, `version` y `checksum`.
-   - **Verificación unitaria:** 13/13 tests nativos pasando (`pio test -e native`).
-2. **Integración en `src/main.cpp` y simulación visual en Wokwi:**
-   - Lectura I2C directa de `MPU-6050` (`0x68`) para acelerómetro, giroscopio y temperatura.
-   - Control de altitud manual por potenciómetro deslizante ($0\text{ m}$ a $500\text{ m}$) y perfil de vuelo sintético automático (`0 m -> 400 m -> Apogeo -> 80 % -> Landed`).
-   - Integración en tiempo real de `FlightStateMachine` y `ApogeeDetector` dentro del `loop()`, actualizando 5 LEDs de estado y el servomotor de liberación del mecanismo.
-3. **Payload secundario (`firmware/payload-rpi/src/main.py`):**
-   - Esqueleto funcional en Python para recepción UART a 115200 baudios, log en CSV y respuesta `ACK` ante eventos.
+### 3.1 Trama CSV a 1 Hz (`X5`)
 
----
+```text
+TEAM_ID,MISSION_TIME_MS,PACKET_COUNT,MODE,STATE,ALT_M,PRESS_PA,TEMP_C,BATT_V,CURR_MA,
+ACC_X,ACC_Y,ACC_Z,GYR_X,GYR_Y,GYR_Z,LAT,LON,GPS_ALT_M,SATS,
+MAG_X_UT,MAG_Y_UT,MAG_Z_UT,OPT1,OPT2,OPT3,OPT4,RTC_H,RTC_M,RTC_S,RTC_VALID,GPS_FIX,
+OPTIONAL_DATA
+```
 
-## 3. Mapa de conexiones del circuito en Wokwi (`diagram.json`)
+### 3.2 Telecomandos soportados (`X3`, `X6`, `F2`, `F3`, `F4`)
 
-| Componente en Wokwi | ID | Pin `ESP32-S3` | Función en la simulación |
-|---|---|:---:|---|
-| `wokwi-mpu6050` | `imu1` | `SDA: GPIO 8`<br>`SCL: GPIO 9` | Sensor IMU I2C (`0x68`). Permite variar aceleración ($X,Y,Z$), giro ($X,Y,Z$) y temperatura con sliders. |
-| `wokwi-slide-potentiometer` | `pot_alt` | `GPIO 4` (ADC) | Control manual de altitud ($0\text{ m}$ a $500\text{ m}$) y presión barométrica asociada. |
-| `wokwi-pushbutton` (Verde) | `btn_launch` | `GPIO 5` | Inicia o reinicia el vuelo simulado automático (`SIM`). |
-| `wokwi-led` (Azul) | `led_pad` | `GPIO 10` | Estado `LaunchPad` (CanSat armado en rampa). |
-| `wokwi-led` (Verde) | `led_ascent` | `GPIO 11` | Estado `Ascent` (ascenso detectado al superar $15\text{ m}$). |
-| `wokwi-led` (Amarillo) | `led_descent` | `GPIO 12` | Estado `Descent` (apogeo detectado). |
-| `wokwi-led` (Rojo) | `led_para2` | `GPIO 13` | Disparo del **2.º paracaídas al 80 %** de la altura máxima o comando `MEC`. |
-| `wokwi-led` (Blanco) | `led_landed` | `GPIO 14` | Estado `Landed` (aterrizaje confirmado $\le 5\text{ m}$). |
-| `wokwi-servo` | `servo_mec` | `GPIO 15` | Mecanismo de liberación: `0°` cerrado, gira a `90°` al activarse el 2.º paracaídas o `MEC`. |
-
----
-
-## 4. Procedimiento paso a paso para probar en Wokwi Online
-
-1. Abrir en el navegador: **[https://wokwi.com/projects/new/esp32-s3](https://wokwi.com/projects/new/esp32-s3)**
-2. En la pestaña **`sketch.ino`**, reemplazar todo el contenido por el de [`firmware/obc-esp32s3/wokwi_online_sketch.ino`](../../../firmware/obc-esp32s3/wokwi_online_sketch.ino).
-3. En la pestaña **`diagram.json`**, reemplazar todo el contenido por el de [`firmware/obc-esp32s3/diagram.json`](../../../firmware/obc-esp32s3/diagram.json).
-4. Presionar el botón verde **Play (Start the simulation)**.
-
-### Casos de prueba interactivos
-
-- **Caso 1 — Vuelo automático completo (`SW-02`, `SW-03`, `SW-06`, `SW-07`):**
-  - Presionar el **Botón Verde (`LANZAR / SIM`)** en el circuito o enviar `SIM` por el monitor serie.
-  - Verificar la secuencia de LEDs: Azul (`LaunchPad`) $\rightarrow$ Verde (`Ascent`, sube hasta $400\text{ m}$) $\rightarrow$ Amarillo (`Descent` al caer $5\text{ m}$ desde el apogeo) $\rightarrow$ Rojo + giro de Servo a `90°` al cruzar $320\text{ m}$ ($80\text{ \%}$ de $400\text{ m}$) $\rightarrow$ Blanco (`Landed` al bajar de $5\text{ m}$).
-- **Caso 2 — Control manual de altitud:**
-  - Deslizar `pot_alt` con el mouse para subir por encima de $100\text{ m}$, esperar al menos $10\text{ s}$ de tiempo de vuelo y descender gradualmente para comprobar los umbrales de apogeo y del 80 %.
-- **Caso 3 — Estímulo de IMU (`MPU-6050`):**
-  - Hacer clic sobre el módulo `MPU-6050` y mover los controles de aceleración, velocidad angular y temperatura; verificar su actualización en las columnas de la trama CSV cada 1 segundo.
-- **Caso 4 — Telecomandos (`SW-08`):**
-  - Enviar desde la consola serie:
-    - `CX` $\rightarrow$ devuelve `CX OK <ESTADO> PKT=<N>`.
-    - `ST` $\rightarrow$ devuelve `ST OK`.
-    - `CAL` $\rightarrow$ calibra el cero de altitud en la posición actual (`CAL OK`).
-    - `MEC` $\rightarrow$ activa manualmente el mecanismo, enciende el LED rojo y posiciona el servo en `90°` (`MEC OK`).
-    - `RST` $\rightarrow$ reinicia la máquina de estados a `LaunchPad` y vuelve el servo a `0°` (`RST OK`).
+- **Automático en separación/despegue (`X3`):** Al detectar el lanzamiento (`Ascent`), el OBC transmite automáticamente `CMD:MISSION_START;STATE:Ascent`.
+- **`CX` (`X6`, `F4`):** Devuelve estado de vuelo, conteo de paquetes, estado de batería (`BATT`, `CURR`) y señal de los 4 paneles solares (`SOLAR=opt1,opt2,opt3,opt4`):
+  ```text
+  CX OK <STATE> PKT=<N> BATT=<V>V CURR=<mA>mA SOLAR=<U4>,<U5>,<U6>,<U7>
+  ```
+- **`ST HH:MM:SS` (`F3`):** Ajusta la hora UTC del CanSat desde la estación terrena con resolución de $1\text{ s}$.
+- **`CAL` (`F2`):** Calibra la altitud barométrica a cero en la rampa de lanzamiento y persiste el offset en FRAM.
+- **`MEC`:** Activa el servo `SG90` (`90°`) para liberar el segundo paracaídas y persiste el estado en FRAM.
+- **`$RPI,...`:** Inyecta una trama desde la Raspberry Pi Zero W con magnetómetro, fotodiodos y actitud calculada.

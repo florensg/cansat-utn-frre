@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "cortex": {
+      "type": "local",
+      "command": [
+        "C:\\Users\\Flor Gonzalez\\AppData\\Local\\Python\\pythoncore-3.14-64\\Scripts\\cortex.exe",
+        "mcp-server",
+        "--stdio",
+        "--project-root",
+        "C:\\1-Proyectos\\CanSat"
+      ],
+      "enabled": true,
+      "environment": {
+        "PYTHONWARNINGS": "ignore"
+      }
+    }
+  }
+}

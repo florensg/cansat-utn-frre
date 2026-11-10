@@ -21,20 +21,27 @@ struct SensorSample {
   float longitude_deg = 0.0f;
   float gps_altitude_m = 0.0f;
   uint8_t satellites = 0;
+  uint8_t gps_fix = 0;
+
+  // Magnetometro LIS3MDL (3 ejes en microteslas).
+  float mag_x_ut = 0.0f;
+  float mag_y_ut = 0.0f;
+  float mag_z_ut = 0.0f;
+
+  // Cuatro canales opticos (TSL251RD U4..U7 via ADS1115).
+  uint16_t optical_raw[4] = {0, 0, 0, 0};
+
+  // Tiempo UTC sincronizado por GPS NEO-M8N o comando ST.
+  uint8_t rtc_hour = 0;
+  uint8_t rtc_minute = 0;
+  uint8_t rtc_second = 0;
+  uint8_t rtc_valid = 0;
 };
 
 class ISensorSource {
  public:
   virtual ~ISensorSource() = default;
   virtual bool read(SensorSample& out) = 0;
-};
-
-class SimulatedSensorSource final : public ISensorSource {
- public:
-  bool read(SensorSample& out) override;
-
- private:
-  uint32_t tick_ = 0;
 };
 
 }  // namespace cansat

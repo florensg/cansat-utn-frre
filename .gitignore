@@ -42,3 +42,9 @@ __pycache__/
 *.log
 *.tmp
 *.bak
+# Cortex (new layout)
+.cortex/memory/
+.cortex/sessions/
+.cortex/vault/sessions/
+.cortex/.cortex/
+.cortex/session.lock
