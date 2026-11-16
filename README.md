@@ -27,7 +27,7 @@ Detalle completo en [`docs/00-gestion/participantes.md`](docs/00-gestion/partici
 ├── docs/                       Documentación técnica y de gestión
 │   ├── 00-gestion/             Planificación, roles y listas de elementos
 │   ├── 01-requisitos/          Bases, reglamento, Anexo A y requisitos
-│   ├── 02-arquitectura/        Diagramas, interfaces y propuesta de circuito
+│   ├── 02-arquitectura/        Diagramas, interfaces y circuito vigente (v.2)
 │   ├── 03-subsistemas/         Software de vuelo, actitud, secundaria, RF
 │   ├── 04-pruebas/             Planes, matrices y evidencias de ensayos
 │   └── 05-pdr/                 Material y checklist de la PDR
@@ -36,7 +36,9 @@ Detalle completo en [`docs/00-gestion/participantes.md`](docs/00-gestion/partici
 │   └── payload-rpi/            Software de la placa secundaria (Raspberry Pi)
 ├── gcs/                        Estación terrena (recepción, GUI y CSV)
 ├── hardware/                   CAD, Proteus y documentación de hardware
-└── datasheets/                 Hojas de datos de los componentes
+├── Datasheets/                 Hojas de datos de los componentes
+├── simulacion/                 Simulaciones (Wokwi u otras)
+└── Documentación/              Datos personales del equipo — NO se versiona
 ```
 
 ## Puesta en marcha
@@ -95,8 +97,8 @@ La GCS está a cargo de ISI 2. El contrato de datos y los requisitos de interfaz
 
 Por privacidad y tamaño, quedan fuera del repositorio:
 
-- `Documentación/`: DNIs, certificados y documentación de identidad del equipo.
-- `Datos Participantes.xlsx`: contiene DNI, fecha de nacimiento y correos.
+- `Documentación/`: DNIs, certificados, documentación de identidad del equipo y
+  `Datos Participantes.xlsx` (DNI, fecha de nacimiento y correos).
 - `Ignorar (Basura)/`: material descartado.
 - `Librerias Proteus/Proteus 8.13 SP0 - Samdey Microelectronic.rar`: instalador de 462 MB.
 - Backups y workspaces de Proteus.
@@ -107,7 +109,9 @@ Estos archivos deben conservarse en el Drive del equipo o en almacenamiento loca
 
 - Repositorio creado y estructura documental inicial.
 - Software de vuelo migrado a **ESP32-S3 DevKitC-1**: compila para la placa y mantiene
-  los 13 tests nativos.
+  los 16 tests nativos.
+- Referencia de hardware vigente: **CIRCUITO ELECTRÓNICO Y ALIMENTACIÓN v.2** (ver
+  [`docs/02-arquitectura/`](docs/02-arquitectura/)).
 - Pendiente de acordar con IEM 3 e ISI 2: pinout definitivo, trama de telemetría y
   protocolo entre el OBC y la placa secundaria.
 

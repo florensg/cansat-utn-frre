@@ -1,6 +1,6 @@
 # Firmware de Cámaras de Misión Principal — 2x XIAO ESP32-S3 Sense (`U8` Cenit y `U9` Nadir)
 
-Firmware para los dos módulos **Seeed Studio XIAO ESP32-S3 Sense** (`U8` y `U9`) definidos en [`PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`](../../PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf) y en [`Arquitectura General Hardware.drawio`](../../docs/02-arquitectura/diagramas/Arquitectura%20General%20Hardware.drawio).
+Firmware para los dos módulos **Seeed Studio XIAO ESP32-S3 Sense** (`U8` y `U9`) definidos en [`circuito-electronico-y-alimentacion-v2.pdf`](../../docs/02-arquitectura/circuito-electronico-y-alimentacion-v2.pdf) y en [`Arquitectura General Hardware.drawio`](../../docs/02-arquitectura/diagramas/Arquitectura%20General%20Hardware.drawio).
 
 ## Rol de cada cámara en el CanSat
 

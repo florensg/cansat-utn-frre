@@ -4,10 +4,12 @@
 - **Última actualización:** 2026-11-10
 - **Responsable:** Florencia González (`ISI 1` — Software de vuelo, telemetría y determinación de actitud)
 - **Placa simulada:** `ESP32-S3 DevKitC-1` de 44 pines (Elementos v2, `C-002`)
-- **Referencia de hardware:** [`PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`](../../../PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf) y [`Anexo A v2 .pdf`](../../01-requisitos/competencia/v2/Anexo%20A%20v2%20.pdf)
-- **Archivos asociados:**
-  - [`firmware/obc-esp32s3/diagram.json`](../../../firmware/obc-esp32s3/diagram.json)
-  - [`firmware/obc-esp32s3/wokwi_online_sketch.ino`](../../../firmware/obc-esp32s3/wokwi_online_sketch.ino)
+
+> **Estado:** evidencia histórica de la arquitectura **v3** (sin RTC externo),
+> reemplazada por el circuito **v.2**. Para el estado vigente ver
+> [`correcciones-conexionado-y-estado-firmware-v2.md`](../../02-arquitectura/correcciones-conexionado-y-estado-firmware-v2.md).
+- **Referencia de hardware:** [`PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`](../../02-arquitectura/archivo/PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf) y [`Anexo A v2 .pdf`](../../01-requisitos/competencia/v2/Anexo%20A%20v2%20.pdf)
+- **Archivos asociados:** `firmware/obc-esp32s3/diagram.json` y `firmware/obc-esp32s3/wokwi_online_sketch.ino` (**no versionados**: la simulación se corrió en Wokwi Online)
   - [`firmware/obc-esp32s3/include/config.h`](../../../firmware/obc-esp32s3/include/config.h)
   - [`firmware/obc-esp32s3/src/main.cpp`](../../../firmware/obc-esp32s3/src/main.cpp)
   - [`firmware/payload-rpi/src/main.py`](../../../firmware/payload-rpi/src/main.py)
@@ -19,7 +21,7 @@
 
 1. **Eliminación del RTC externo (`RV-3028-C7` / `DS1307`):**
    - El esquemático v3 eliminó el bloque `RV1`.
-   - Se retiró `rtc1` (`wokwi-ds1307` en `Wire1`) de [`diagram.json`](../../../firmware/obc-esp32s3/diagram.json).
+   - Se retiró `rtc1` (`wokwi-ds1307` en `Wire1`) de `diagram.json` (archivo de simulación no versionado).
    - El tiempo UTC (`RTC_H`, `RTC_M`, `RTC_S`, `RTC_VALID`) se mantiene mediante `TimeKeeper`, sincronizado con las sentencias `$GPGGA`/`$GNGGA` del GPS `NEO-M8N` o con el telecomando `ST HH:MM:SS` ($\pm 1\text{ s}$ según requisito **F3** de [`Anexo A v2 .pdf`](../../01-requisitos/competencia/v2/Anexo%20A%20v2%20.pdf)).
 2. **Separación estricta Vuelo (`env:obc`) vs. Simulación (`env:sim` / `CANSAT_SIMULATION`):**
    - En [`platformio.ini`](../../../firmware/obc-esp32s3/platformio.ini), el entorno `env:obc` compila sin `CANSAT_SIMULATION`: nunca inyecta tramas NMEA sintéticas, no reemplaza el `INA219` con valores fijos ni usa potenciómetros de Wokwi.

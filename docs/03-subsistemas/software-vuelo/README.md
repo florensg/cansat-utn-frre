@@ -66,6 +66,7 @@ lib/flight_core/
   sensors/                    Interfaz de fuentes de datos y calibración
   commands/                   Parser de telecomandos
   flight/                     Detección de apogeo y del 80 % de altura
+  power/                      Política de rieles conmutables (circuito v.2)
 include/config.h              Placa, pines, constantes y parámetros de misión
 ```
 
@@ -126,9 +127,11 @@ Variables que deben sobrevivir a un reinicio:
 Mecanismos:
 
 - FRAM MB85RC256V por I2C para el estado persistente.
-- RTC RV-3028-C7 con VBAT para mantener el tiempo de misión.
+- RTC RV-3028-C7 (`0x52`) con VBAT `CR1225` para mantener el tiempo de misión.
+  Jerarquía y driver: [`tiempo-mision-v2.md`](tiempo-mision-v2.md).
 - Task Watchdog Timer (TWDT) del ESP32-S3 con refresco cooperativo y RTC WDT de respaldo.
-- Registro de causa de reinicio para diagnóstico post-vuelo.
+  LED de estado, watchdog y causa de reinicio: [`indicadores-v2.md`](indicadores-v2.md).
+- Registro de causa de reinicio para diagnóstico post-vuelo (`RST:<tag>` en `OPTIONAL_DATA`).
 
 ## Detección de apogeo y del 80 %
 
@@ -151,8 +154,24 @@ Algoritmo base implementado en `lib/flight_core/src/flight.cpp`:
 | `ST` | Configurar hora | Confirmación con hora aplicada |
 | `CAL` | Calibrar altitud a cero | Confirmación con offset aplicado |
 | `MEC` | Activar mecanismo | Confirmación y registro del evento |
+| `RPI` | Preparar carga útil (RPi + XIAO + servo) antes del lanzamiento | `RPI OK` |
+| `RPIOFF` | Apagar la carga útil | `RPIOFF OK` |
 
 El parser y las constantes están en `lib/flight_core/include/flight_core/commands.h`.
+
+### Power gating (circuito v.2)
+
+La conmutación de rieles está implementada como capa separada:
+
+- `lib/flight_core/src/power.cpp` — política pura por estado de vuelo.
+- `src/power_manager.cpp` — traducción a GPIO y estado actual.
+- `include/config.h` — pines y `kPowerGatingEnabled`.
+
+Diseño completo, tabla de estados y comando `RPI` en
+[`power-gating-v2.md`](power-gating-v2.md). Está **activo** (`kPowerGatingEnabled = true`)
+con las llaves en GPIO11/12/38/39/40; queda pendiente recablear 38/39/40 en el prototipo.
+Con `kPowerGatingEnabled = false` no se toca ningún pin y todos los rieles se reportan
+encendidos (comportamiento legacy).
 
 ## Interfaces pendientes de acordar
 
@@ -163,7 +182,9 @@ El parser y las constantes están en `lib/flight_core/include/flight_core/comman
   comandos y acuse de recibo.
 - **Con IEM 2 (Maximiliano):** señal eléctrica del mecanismo de liberación, tiempos y
   condiciones de seguridad.
-- **Con IEM 1 (Catriel):** perfiles de consumo, umbrales de batería y lectura del INA219.
+- **Con IEM 1 (Catriel):** mapa GPIO definitivo de cada llave de alimentación
+  (`TPS2553`/`TPS22946`/`AO3401A`), perfiles de consumo, umbrales de batería y lectura
+  del INA219.
 - **Con IEM 4 (Luciana):** sistema de ejes y referencia mecánica para actitud.
 
 ## Hoja de ruta
@@ -194,6 +215,6 @@ cd firmware/obc-esp32s3
 pio test -e native
 ```
 
-Los tests cubren transiciones de la FSM, formateo de telemetría, detección de apogeo y
-parser de comandos. Las pruebas de hardware se documentan en
-[`docs/04-pruebas/README.md`](../../04-pruebas/README.md).
+Los tests cubren transiciones de la FSM, formateo de telemetría, detección de apogeo,
+política de rieles conmutables y parser de comandos. Las pruebas de hardware se
+documentan en [`docs/04-pruebas/README.md`](../../04-pruebas/README.md).

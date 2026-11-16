@@ -1,13 +1,13 @@
-# Software de Misión Secundaria — Raspberry Pi Zero 2W (`RPI1`, Circuito v3)
+# Software de Misión Secundaria — Raspberry Pi Zero 2W (`RPI1`, Circuito v.2)
 
-Software del procesador exclusivo de la **Misión Secundaria** del CanSat, alineado con [`PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf`](../../PROPUESTA_DE_CIRCUITO_CANSAT_v3.pdf), [`Arquitectura General Hardware.drawio`](../../docs/02-arquitectura/diagramas/Arquitectura%20General%20Hardware.drawio), [`docs/03-subsistemas/secundaria/README.md`](../../docs/03-subsistemas/secundaria/README.md) y [`docs/03-subsistemas/actitud/README.md`](../../docs/03-subsistemas/actitud/README.md).
+Software del procesador exclusivo de la **Misión Secundaria** del CanSat, alineado con [`circuito-electronico-y-alimentacion-v2.pdf`](../../docs/02-arquitectura/circuito-electronico-y-alimentacion-v2.pdf), [`Arquitectura General Hardware.drawio`](../../docs/02-arquitectura/diagramas/Arquitectura%20General%20Hardware.drawio), [`docs/03-subsistemas/secundaria/README.md`](../../docs/03-subsistemas/secundaria/README.md) y [`docs/03-subsistemas/actitud/README.md`](../../docs/03-subsistemas/actitud/README.md).
 Responsable: Florencia González (`ISI 1`).
 
 ## Hardware de la Misión Secundaria conectado a `RPI1`
 
 - **Bus I2C1 (`GPIO 2` SDA / `GPIO 3` SCL):**
   - **`LIS3MDL` (`U1`, `0x1C` / `0x1E`):** Magnetómetro de 3 ejes ($\pm 4\text{ gauss}$, $80\text{ Hz}$). Pin `INT` en `GPIO 17`.
-  - **`ADS1115` (`0x48`):** Conversor ADC de 16 bits para los **4 fotodiodos solares `BPW34`** (representados como `U4..U7` `TSL251RD` en el esquemático v3):
+  - **`ADS1115` (`0x48`):** Conversor ADC de 16 bits para los **4 fotodiodos solares `BPW34`** (representados como `U4..U7` `TSL251RD` en el esquemático v.2):
     - `U4` (`BPW34` +X) $\rightarrow$ `AIN3` (`A3`)
     - `U5` (`BPW34` -X) $\rightarrow$ `AIN2` (`A2`)
     - `U6` (`BPW34` +Y) $\rightarrow$ `AIN1` (`A1`)
@@ -16,6 +16,8 @@ Responsable: Florencia González (`ISI 1`).
   - **Cámara Nadir Infrarroja (`IMX219 NoIR`):** Captura imágenes en infrarrojo cercano (NIR) durante el descenso para el cálculo de índices multiespectrales y clasificación de terreno.
 - **UART (`GPIO 14` TXD / `GPIO 15` RXD):**
   - Enlace serie a `115200 8N1` con el OBC (`ESP32-S3 DevKitC-1`).
+  - Del lado del OBC la UART0 se remapea a **GPIO14 (RX) / GPIO13 (TX)**; el XBee usa
+    otra UART en GPIO15/16. Ver [`pinmap-esp32s3-v2.md`](../../docs/02-arquitectura/pinmap-esp32s3-v2.md).
 
 ## Funciones en la Misión Secundaria
 

@@ -32,6 +32,14 @@ CommandType parse_command(const char* line) {
   if (matches(line, "MEC")) {
     return CommandType::ActivateMechanism;
   }
+  // "RPIOFF" antes que "RPI": matches() exige delimitador despues del token,
+  // pero el orden explicito evita ambiguedad si se relaja esa regla.
+  if (matches(line, "RPIOFF")) {
+    return CommandType::RpiOff;
+  }
+  if (matches(line, "RPI")) {
+    return CommandType::RpiOn;
+  }
   return CommandType::None;
 }
 
@@ -47,6 +55,10 @@ const char* command_name(CommandType type) {
       return "CAL";
     case CommandType::ActivateMechanism:
       return "MEC";
+    case CommandType::RpiOn:
+      return "RPI";
+    case CommandType::RpiOff:
+      return "RPIOFF";
   }
   return "NONE";
 }

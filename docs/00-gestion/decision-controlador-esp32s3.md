@@ -50,9 +50,9 @@ integrada.
 
 ## Fuentes
 
-- [`planificacion-general-v3.xlsx`](../planificacion-general-v3.xlsx), hoja `Gantt PDR`,
+- [`planificacion-general-v3.xlsx`](planificacion-general-v3.xlsx), hoja `Gantt PDR`,
   fila 16 (actividad 5.0).
-- [`elementos-cansat-v2.xlsx`](../elementos-cansat-v2.xlsx), hoja `Componentes`, filas 2 y
+- [`elementos-cansat-v2.xlsx`](elementos-cansat-v2.xlsx), hoja `Componentes`, filas 2 y
   3 (C-001 descartado, C-002 seleccionado).
-- [`elementos-cansat-v2.xlsx`](../elementos-cansat-v2.xlsx), hoja `Presupuesto de masa`,
+- [`elementos-cansat-v2.xlsx`](elementos-cansat-v2.xlsx), hoja `Presupuesto de masa`,
   fila 29: “Incluye ESP32-S3 seleccionado”.

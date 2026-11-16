@@ -12,22 +12,34 @@
 #include "flight_core/commands.h"
 #include "flight_core/flight.h"
 #include "flight_core/fsm.h"
+#include "flight_core/mission_time.h"
+#include "flight_core/power.h"
 #include "flight_core/sensors.h"
+#include "flight_core/status.h"
 #include "flight_core/storage.h"
 #include "flight_core/telemetry.h"
+#include "power_manager.h"
+#include "rtc_rv3028.h"
+#include "status_output.h"
+#include "watchdog.h"
 
 namespace {
 
 using cansat::ApogeeDetector;
 using cansat::CommandType;
+using cansat::DateTime;
 using cansat::Event;
 using cansat::FlightEvent;
 using cansat::FlightStateMachine;
 using cansat::MemoryStorage;
+using cansat::MissionClock;
 using cansat::PersistentState;
+using cansat::RtcHealth;
 using cansat::SensorSample;
 using cansat::State;
+using cansat::SystemHealth;
 using cansat::TelemetryFrame;
+using cansat::TimeSource;
 
 FlightStateMachine g_fsm;
 ApogeeDetector g_apogee({cansat::kMinApogeeAltitudeM, cansat::kApogeeDropM,
@@ -55,35 +67,25 @@ bool g_xiao_nir_available = false;
 bool g_mechanism_activated = false;
 char g_last_cmd_echo[16] = "NONE";
 char g_rpi_payload_summary[64] = "";
-char g_optional_buffer[160] = "";
+char g_optional_buffer[192] = "";
 
-// Tiempo UTC / mision derivado de GPS ($GPGGA / $GNGGA) o comando ST + millis()
-struct TimeKeeper {
-  bool synced = false;
-  uint32_t base_seconds_of_day = 0;
-  uint32_t base_millis = 0;
+// Re-sondeo de camaras XIAO cuando su riel se enciende (necesitan bootear).
+bool g_xiao_reprobe_pending = false;
+uint32_t g_xiao_reprobe_at_ms = 0;
 
-  void sync_hms(uint8_t h, uint8_t m, uint8_t s, uint32_t now_ms) {
-    if (h < 24 && m < 60 && s < 60) {
-      base_seconds_of_day =
-          static_cast<uint32_t>(h) * 3600u + static_cast<uint32_t>(m) * 60u + s;
-      base_millis = now_ms;
-      synced = true;
-    }
-  }
+// Estado del RTC RV-3028-C7 (fuente de tiempo cuando el GPS no tiene fix).
+bool g_rtc_available = false;
+bool g_rtc_power_loss = false;
+// El RTC se sincroniza desde el GPS una sola vez por encendido para no
+// reescribirlo en cada trama NMEA.
+bool g_rtc_written_from_gps = false;
 
-  void get_hms(uint32_t now_ms, uint8_t& h, uint8_t& m, uint8_t& s,
-               uint8_t& valid) const {
-    const uint32_t elapsed_s = (now_ms - base_millis) / 1000u;
-    const uint32_t total_s = (base_seconds_of_day + elapsed_s) % 86400u;
-    h = static_cast<uint8_t>(total_s / 3600u);
-    m = static_cast<uint8_t>((total_s % 3600u) / 60u);
-    s = static_cast<uint8_t>(total_s % 60u);
-    valid = synced ? 1u : 0u;
-  }
-};
+// Reloj de mision con jerarquia GPS > comando ST > RTC > millis().
+MissionClock g_clock;
 
-TimeKeeper g_clock;
+// Causa del reinicio actual (watchdog, brownout, panic, ...). Se captura una
+// sola vez en setup() y se publica en OPTIONAL_DATA como RST:<tag>.
+char g_reset_reason_tag = '?';
 
 // Datos reportados por la Raspberry Pi Zero W (LIS3MDL + ADS1115/TSL251RD + actitud)
 struct RpiPayloadState {
@@ -102,11 +104,18 @@ struct RpiPayloadState {
 
 RpiPayloadState g_rpi;
 
+// Buffer de lineas recibidas por el XBee (telecomandos de la GCS).
+char g_radio_line[96] = "";
+uint8_t g_radio_line_len = 0;
+
 // ---------------------------------------------------------------------------
-// Utilidades I2C (soporta bus principal Wire y bus alternativo Wire1 si IEM 3
-// separa I2C en GPIO 13/14 mientras BMP280 usa SPI en GPIO 8/9)
+// Utilidades I2C. Bus unico en GPIO 8/9 (pinmap v.2).
 // ---------------------------------------------------------------------------
 TwoWire* g_i2c_bus = &Wire;
+
+// UART0 remapeada a GPIO14/13 para el enlace con la Raspberry Pi.
+// (Serial = USB CDC; Serial1 = GPS; Serial2 = XBee.)
+HardwareSerial g_rpi_serial(0);
 
 bool i2c_probe_on(TwoWire& bus, uint8_t address) {
   bus.beginTransmission(address);
@@ -275,7 +284,8 @@ bool read_mpu6050(SensorSample& sample) {
 }
 
 // ---------------------------------------------------------------------------
-// U2: Barometro BMP280 (soporta I2C 0x76/0x77 y SPI en GPIO 8/9/4/5 segun v3)
+// U2: Barometro BMP280. En el pinmap v.2 va siempre por I2C (CSB atado a 3V3),
+// en 0x76/0x77 sobre el bus principal GPIO 8/9. El modo SPI quedo obsoleto.
 // ---------------------------------------------------------------------------
 enum class BaroTransport : uint8_t { None = 0, I2c = 1, Spi = 2 };
 
@@ -388,27 +398,8 @@ bool init_barometer() {
     }
   }
 
-  // 2) Si no esta en I2C, probar BMP280 por SPI segun esquema v3
-  //    (CSB=GPIO4, SDI=GPIO8, SCK=GPIO9, SDO=GPIO5) cuando el bus I2C usa Wire1
-  if (g_i2c_bus == &Wire1) {
-    pinMode(cansat::kBmp280SpiCsPin, OUTPUT);
-    digitalWrite(cansat::kBmp280SpiCsPin, HIGH);
-    pinMode(cansat::kBmp280SpiMosiPin, OUTPUT);
-    pinMode(cansat::kBmp280SpiSckPin, OUTPUT);
-    digitalWrite(cansat::kBmp280SpiSckPin, LOW);
-    pinMode(cansat::kBmp280SpiMisoPin, INPUT_PULLUP);
-
-    g_baro.transport = BaroTransport::Spi;
-    uint8_t spi_id = 0;
-    if (bmp280_read_regs(0xD0, &spi_id, 1) && spi_id == 0x58 &&
-        init_bmp280_common()) {
-      Serial.println("BARO: BMP280 SPI detectado (CS=GPIO4)");
-      return true;
-    }
-    g_baro.transport = BaroTransport::None;
-  }
-
-  Serial.println("BARO: FAIL (no detectado)");
+  // El BMP280 del pinmap v.2 tiene CSB atado a 3V3: solo existe el modo I2C.
+  Serial.println("BARO: FAIL (no detectado por I2C)");
   return false;
 }
 
@@ -543,6 +534,35 @@ bool init_ads1115() {
   return i2c_write_u16(cansat::kAds1115I2cAddress, 0x01, 0xC383);
 }
 
+// U5: RTC RV-3028-C7. Aporta la fecha/hora cuando el GPS no tiene fix y
+// conserva el tiempo de mision entre reinicios (requisitos F2/F3).
+void init_rtc() {
+  const RtcHealth health = cansat::rtc_init(Wire, cansat::kRtcI2cAddress);
+  g_rtc_available = health.present;
+  g_rtc_power_loss = health.power_loss;
+
+  if (!health.present) {
+    Serial.println("RTC: FAIL (no responde en 0x52)");
+    return;
+  }
+
+  DateTime dt;
+  if (health.time_valid && cansat::rtc_read_datetime(Wire, cansat::kRtcI2cAddress, dt)) {
+    g_clock.sync(TimeSource::Rtc, dt, millis());
+    Serial.printf("RTC: OK %04u-%02u-%02u %02u:%02u:%02u UTC (semana %u)\n",
+                  static_cast<unsigned>(dt.year), static_cast<unsigned>(dt.month),
+                  static_cast<unsigned>(dt.day), static_cast<unsigned>(dt.hour),
+                  static_cast<unsigned>(dt.minute),
+                  static_cast<unsigned>(dt.second),
+                  static_cast<unsigned>(cansat::weekday_iso(dt)));
+    return;
+  }
+
+  Serial.printf("RTC: presente pero sin hora confiable (PORF=%u); "
+                "se espera GPS o ST\n",
+                health.power_loss ? 1u : 0u);
+}
+
 bool ads1115_read_channel(uint8_t mux, uint16_t& raw_value) {
   const uint16_t config =
       static_cast<uint16_t>(0xC383 | ((mux & 0x07) << 12));
@@ -661,31 +681,49 @@ float nmea_to_degrees(const char* value, char hemisphere) {
   return result;
 }
 
-void parse_nmea_line(char* line, uint32_t now_ms) {
-  if (std::strncmp(line, "$GPGGA", 6) != 0 &&
-      std::strncmp(line, "$GNGGA", 6) != 0) {
-    return;
-  }
-  char* field[15] = {nullptr};
+// Separa una trama NMEA en campos in-place (destructivo sobre `line`).
+uint8_t split_nmea_fields(char* line, char** field, uint8_t max_fields) {
   uint8_t count = 0;
+  if (max_fields == 0) {
+    return 0;
+  }
   field[count++] = line;
-  for (char* p = line; *p != '\0' && count < 15; ++p) {
+  for (char* p = line; *p != '\0' && count < max_fields; ++p) {
     if (*p == ',') {
       *p = '\0';
       field[count++] = p + 1;
     }
   }
+  return count;
+}
+
+// hhmmss.ss -> h/m/s. Devuelve false si el campo no tiene la forma esperada.
+bool nmea_time_to_hms(const char* value, uint8_t& hour, uint8_t& minute,
+                      uint8_t& second) {
+  if (value == nullptr || std::strlen(value) < 6) {
+    return false;
+  }
+  const int hhmmss = std::atoi(value);
+  hour = static_cast<uint8_t>((hhmmss / 10000) % 24);
+  minute = static_cast<uint8_t>((hhmmss / 100) % 100);
+  second = static_cast<uint8_t>(hhmmss % 100);
+  return minute < 60 && second < 60;
+}
+
+// $--GGA: fix, satelites, posicion y altura. Aporta la hora pero no la fecha.
+void parse_nmea_gga(char** field, uint8_t count, uint32_t now_ms) {
   if (count < 10) {
     return;
   }
-  // Campo 1: hhmmss.ss (hora UTC del GPS)
-  if (field[1] != nullptr && std::strlen(field[1]) >= 6) {
-    const int hhmmss = std::atoi(field[1]);
-    const uint8_t hh = static_cast<uint8_t>((hhmmss / 10000) % 24);
-    const uint8_t mm = static_cast<uint8_t>((hhmmss / 100) % 100);
-    const uint8_t ss = static_cast<uint8_t>(hhmmss % 100);
-    g_clock.sync_hms(hh, mm, ss, now_ms);
+  uint8_t hh = 0;
+  uint8_t mm = 0;
+  uint8_t ss = 0;
+  if (nmea_time_to_hms(field[1], hh, mm, ss)) {
+    // Solo la hora: la fecha la aporta la trama RMC. Mientras no llegue, el
+    // reloj mantiene la fecha que ya tenia (RTC o referencia interna).
+    g_clock.sync_time_only(TimeSource::Gps, hh, mm, ss, now_ms);
   }
+
   const int fix_quality = std::atoi(field[6]);
   g_gps.fix = fix_quality > 0;
   g_gps.satellites = static_cast<uint8_t>(std::atoi(field[7]) & 0xFF);
@@ -695,6 +733,72 @@ void parse_nmea_line(char* line, uint32_t now_ms) {
   g_gps.latitude_deg = nmea_to_degrees(field[2], field[3][0]);
   g_gps.longitude_deg = nmea_to_degrees(field[4], field[5][0]);
   g_gps.altitude_m = static_cast<float>(std::atof(field[9]));
+}
+
+// $--RMC: hora y fecha UTC completas con flag de validez. Es la trama que fija
+// la referencia absoluta y la que se escribe en el RTC.
+void parse_nmea_rmc(char** field, uint8_t count, uint32_t now_ms) {
+  if (count < 10) {
+    return;
+  }
+  // Campo 2: 'A' = dato valido, 'V' = advertencia (sin fix).
+  if (field[2] == nullptr || field[2][0] != 'A') {
+    return;
+  }
+
+  uint8_t hh = 0;
+  uint8_t mm = 0;
+  uint8_t ss = 0;
+  if (!nmea_time_to_hms(field[1], hh, mm, ss)) {
+    return;
+  }
+
+  // Campo 9: ddmmyy
+  const char* date_field = field[9];
+  if (date_field == nullptr || std::strlen(date_field) < 6) {
+    return;
+  }
+  const int ddmmyy = std::atoi(date_field);
+
+  DateTime dt;
+  dt.day = static_cast<uint8_t>(ddmmyy / 10000);
+  dt.month = static_cast<uint8_t>((ddmmyy / 100) % 100);
+  dt.year = static_cast<uint16_t>(2000 + (ddmmyy % 100));
+  dt.hour = hh;
+  dt.minute = mm;
+  dt.second = ss;
+
+  if (!cansat::datetime_is_valid(dt)) {
+    return;
+  }
+  g_clock.sync(TimeSource::Gps, dt, now_ms);
+
+  // El RTC se actualiza una sola vez por encendido para que sobreviva al corte
+  // de energia; no se reescribe en cada trama (1 Hz seria un desperdicio).
+  if (g_rtc_available && !g_rtc_written_from_gps) {
+    if (cansat::rtc_write_datetime(Wire, cansat::kRtcI2cAddress, dt)) {
+      g_rtc_written_from_gps = true;
+      g_rtc_power_loss = false;
+      Serial.println("RTC: sincronizado desde GPS");
+    }
+  }
+}
+
+void parse_nmea_line(char* line, uint32_t now_ms) {
+  char* field[15] = {nullptr};
+  const bool is_gga = std::strncmp(line, "$GPGGA", 6) == 0 ||
+                      std::strncmp(line, "$GNGGA", 6) == 0;
+  const bool is_rmc = std::strncmp(line, "$GPRMC", 6) == 0 ||
+                      std::strncmp(line, "$GNRMC", 6) == 0;
+  if (!is_gga && !is_rmc) {
+    return;
+  }
+  const uint8_t count = split_nmea_fields(line, field, 15);
+  if (is_gga) {
+    parse_nmea_gga(field, count, now_ms);
+  } else {
+    parse_nmea_rmc(field, count, now_ms);
+  }
 }
 
 void poll_gps(uint32_t now_ms) {
@@ -720,16 +824,18 @@ void poll_gps(uint32_t now_ms) {
 }
 
 // ---------------------------------------------------------------------------
-// Enlace UART2 con XBee S1 Module y Raspberry Pi Zero W (GPIO14/15 en RPi).
-// La RPi envia tramas con el formato:
-//   $RPI,mx,my,mz,opt1,opt2,opt3,opt4,roll,pitch,yaw,tag
-// y tambien se aceptan telecomandos desde el XBee por el mismo puerto.
+// Enlaces serie separados desde el pinmap v.2:
+//   - UART0 remapeada a GPIO14/13 -> Raspberry Pi Zero 2W (115200 8N1).
+//     La RPi envia tramas con el formato:
+//       $RPI,mx,my,mz,opt1,opt2,opt3,opt4,roll,pitch,yaw,tag
+//   - UART2 en GPIO15/16 -> XBee-PRO 900HP (telecomandos de la GCS).
 // ---------------------------------------------------------------------------
 void handle_command(const char* line, uint32_t now_ms);
 
+// Tramas que llegan por la UART de la RPi: solo se aceptan lineas `$RPI,`.
+// Cualquier otra cosa se descarta (los comandos de la GCS llegan por radio).
 void parse_rpi_line(char* line, uint32_t now_ms) {
   if (std::strncmp(line, "$RPI,", 5) != 0) {
-    handle_command(line, now_ms);
     return;
   }
   char* field[16] = {nullptr};
@@ -764,9 +870,10 @@ void parse_rpi_line(char* line, uint32_t now_ms) {
   g_rpi.last_rx_ms = now_ms;
 }
 
-void poll_radio_and_rpi(uint32_t now_ms) {
-  while (Serial2.available() > 0) {
-    const char c = static_cast<char>(Serial2.read());
+// Lee las tramas `$RPI,...` que envia la Raspberry Pi por su UART dedicada.
+void poll_rpi_serial(uint32_t now_ms) {
+  while (g_rpi_serial.available() > 0) {
+    const char c = static_cast<char>(g_rpi_serial.read());
     if (c == '\r') {
       continue;
     }
@@ -782,6 +889,29 @@ void poll_radio_and_rpi(uint32_t now_ms) {
       g_rpi.line[g_rpi.line_len++] = c;
     } else {
       g_rpi.line_len = 0;
+    }
+  }
+}
+
+// Lee los telecomandos de la GCS que llegan por el XBee (UART2).
+void poll_radio_commands(uint32_t now_ms) {
+  while (Serial2.available() > 0) {
+    const char c = static_cast<char>(Serial2.read());
+    if (c == '\r') {
+      continue;
+    }
+    if (c == '\n') {
+      g_radio_line[g_radio_line_len] = '\0';
+      if (g_radio_line_len > 1) {
+        handle_command(g_radio_line, now_ms);
+      }
+      g_radio_line_len = 0;
+      continue;
+    }
+    if (g_radio_line_len < sizeof(g_radio_line) - 1) {
+      g_radio_line[g_radio_line_len++] = c;
+    } else {
+      g_radio_line_len = 0;
     }
   }
 }
@@ -855,6 +985,7 @@ void update_flight_logic(uint32_t now_ms) {
       // Requisito X3: enviar comando automatico cuando el CanSat comienza la mision
       Serial.println("CMD:MISSION_START;STATE:Ascent");
       Serial2.println("CMD:MISSION_START;STATE:Ascent");
+      g_rpi_serial.println("CMD:MISSION_START;STATE:Ascent");
       Serial.println("EVENT: LAUNCH_DETECTED -> Ascent");
     }
   }
@@ -888,23 +1019,83 @@ void update_flight_logic(uint32_t now_ms) {
   }
 }
 
-void parse_st_time(const char* line, uint32_t now_ms) {
-  // Soporta "ST HH:MM:SS" o "ST YYYY-MM-DDTHH:MM:SS"
-  const char* p = std::strchr(line, 'T');
-  if (p != nullptr) {
-    ++p;
-  } else if (std::strlen(line) > 3) {
-    p = line + 3;
+// Aplica la politica de alimentacion para el estado actual y reprograma el
+// re-sondeo de las camaras XIAO cuando su riel recien se enciende.
+void apply_power_policy(uint32_t now_ms) {
+  const cansat::PowerMask changed =
+      cansat::power_manager_apply(g_fsm.state(),
+                                  cansat::power_manager_payload_prepared());
+  const cansat::PowerMask xiao_rails =
+      cansat::power_bit(cansat::PowerRail::XiaoCenit) |
+      cansat::power_bit(cansat::PowerRail::XiaoNadir);
+  if ((changed & xiao_rails) != 0 &&
+      (cansat::power_manager_mask() & xiao_rails) != 0) {
+    g_xiao_reprobe_pending = true;
+    g_xiao_reprobe_at_ms = now_ms + cansat::kXiaoBootAfterRailMs;
   }
-  if (p != nullptr) {
-    int h = 0;
-    int m = 0;
-    int s = 0;
-    if (std::sscanf(p, "%d:%d:%d", &h, &m, &s) == 3) {
-      g_clock.sync_hms(static_cast<uint8_t>(h), static_cast<uint8_t>(m),
-                       static_cast<uint8_t>(s), now_ms);
+}
+
+void service_deferred_probes(uint32_t now_ms) {
+  if (g_xiao_reprobe_pending && now_ms >= g_xiao_reprobe_at_ms) {
+    g_xiao_reprobe_pending = false;
+    init_xiao_cameras();
+  }
+}
+
+// Ajuste de hora desde tierra (requisito F3, margen de 1 s).
+// Acepta "ST HH:MM:SS" y "ST YYYY-MM-DDTHH:MM:SS". Devuelve true si aplico.
+bool parse_st_time(const char* line, uint32_t now_ms) {
+  const char* iso = std::strchr(line, 'T');
+  int year = 0;
+  int month = 0;
+  int day = 0;
+  int hour = 0;
+  int minute = 0;
+  int second = 0;
+
+  if (iso != nullptr && std::sscanf(iso + 1, "%d:%d:%d", &hour, &minute, &second) == 3) {
+    if (std::sscanf(line, "ST %4d-%2d-%2d", &year, &month, &day) != 3) {
+      return false;
+    }
+  } else {
+    const char* hms = (std::strlen(line) > 3) ? (line + 3) : nullptr;
+    if (hms == nullptr ||
+        std::sscanf(hms, "%d:%d:%d", &hour, &minute, &second) != 3) {
+      return false;
     }
   }
+
+  DateTime dt = g_clock.now(now_ms);
+  if (year > 0) {
+    dt.year = static_cast<uint16_t>(year);
+    dt.month = static_cast<uint8_t>(month);
+    dt.day = static_cast<uint8_t>(day);
+  }
+  dt.hour = static_cast<uint8_t>(hour);
+  dt.minute = static_cast<uint8_t>(minute);
+  dt.second = static_cast<uint8_t>(second);
+
+  if (!cansat::datetime_is_valid(dt)) {
+    return false;
+  }
+
+  g_clock.sync(TimeSource::Command, dt, now_ms);
+
+  // Se persiste en el RTC para que el ajuste sobreviva a un corte de energia
+  // (requisito F2). Si no hay RTC, el ajuste vive solo en RAM. No se marca
+  // g_rtc_written_from_gps: si luego llega un fix, el GPS es autoridad y puede
+  // reescribir el RTC una vez.
+  if (g_rtc_available &&
+      cansat::rtc_write_datetime(Wire, cansat::kRtcI2cAddress, dt)) {
+    g_rtc_power_loss = false;
+  }
+  return true;
+}
+
+// Respuesta a un telecomando: al monitor USB y a la GCS por radio (XBee).
+void reply_command(const char* msg) {
+  Serial.println(msg);
+  Serial2.println(msg);
 }
 
 void handle_command(const char* line, uint32_t now_ms) {
@@ -914,13 +1105,11 @@ void handle_command(const char* line, uint32_t now_ms) {
     g_apogee.reset();
     g_mechanism_activated = false;
     std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "RST");
-    Serial.println("RST OK");
+    reply_command("RST OK");
     return;
   }
   if (std::strncmp(line, "$RPI,", 5) == 0) {
-    char copy[160];
-    std::snprintf(copy, sizeof(copy), "%s", line);
-    parse_rpi_line(copy, now_ms);
+    // Las tramas $RPI solo son validas por la UART dedicada de la RPi.
     return;
   }
 
@@ -928,26 +1117,40 @@ void handle_command(const char* line, uint32_t now_ms) {
   switch (command) {
     case CommandType::Status: {
       std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "CX");
+      uint8_t hh = 0;
+      uint8_t mm = 0;
+      uint8_t ss = 0;
+      uint8_t valid = 0;
+      g_clock.get_hms(now_ms, hh, mm, ss, valid);
       char resp[192];
       std::snprintf(
           resp, sizeof(resp),
-          "CX OK %s PKT=%lu BATT=%.2fV CURR=%.1fmA SOLAR=%u,%u,%u,%u",
+          "CX OK %s PKT=%lu BATT=%.2fV CURR=%.1fmA SOLAR=%u,%u,%u,%u "
+          "TIME=%02u:%02u:%02u UTC=%u TSRC=%c",
           FlightStateMachine::state_name(g_fsm.state()),
           static_cast<unsigned long>(g_packet_count), g_frame.battery_v,
           g_frame.current_ma,
           static_cast<unsigned>(g_frame.optical_raw[0]),
           static_cast<unsigned>(g_frame.optical_raw[1]),
           static_cast<unsigned>(g_frame.optical_raw[2]),
-          static_cast<unsigned>(g_frame.optical_raw[3]));
-      Serial.println(resp);
-      Serial2.println(resp);
+          static_cast<unsigned>(g_frame.optical_raw[3]),
+          static_cast<unsigned>(hh), static_cast<unsigned>(mm),
+          static_cast<unsigned>(ss), static_cast<unsigned>(valid),
+          cansat::time_source_tag(g_clock.source()));
+      reply_command(resp);
       break;
     }
-    case CommandType::SetTime:
-      parse_st_time(line, now_ms);
-      std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "ST");
-      Serial.println("ST OK");
+    case CommandType::SetTime: {
+      if (parse_st_time(line, now_ms)) {
+        std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "ST");
+        reply_command("ST OK");
+      } else {
+        std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "STBAD");
+        reply_command(
+            "ST ERR (usar ST HH:MM:SS o ST YYYY-MM-DDTHH:MM:SS)");
+      }
       break;
+    }
     case CommandType::CalibrateAltitude:
       if (g_baro_last_pa > 0.0f) {
         g_baro_baseline_pa = g_baro_last_pa;
@@ -957,13 +1160,25 @@ void handle_command(const char* line, uint32_t now_ms) {
       }
       std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "CAL");
       persist_state(g_frame.mission_time_ms);
-      Serial.println("CAL OK");
+      reply_command("CAL OK");
       break;
     case CommandType::ActivateMechanism:
       g_mechanism_activated = true;
       std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "MEC");
       persist_state(g_frame.mission_time_ms);
-      Serial.println("MEC OK (Servo liberado -> 90 deg)");
+      reply_command("MEC OK (Servo liberado -> 90 deg)");
+      break;
+    case CommandType::RpiOn:
+      cansat::power_manager_set_payload_prepared(true);
+      std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "RPI");
+      apply_power_policy(now_ms);
+      reply_command("RPI OK (carga util preparada)");
+      break;
+    case CommandType::RpiOff:
+      cansat::power_manager_set_payload_prepared(false);
+      std::snprintf(g_last_cmd_echo, sizeof(g_last_cmd_echo), "RPIOFF");
+      apply_power_policy(now_ms);
+      reply_command("RPIOFF OK (carga util apagada)");
       break;
     case CommandType::None:
       break;
@@ -975,25 +1190,24 @@ void handle_command(const char* line, uint32_t now_ms) {
 void setup() {
   Serial.begin(cansat::kSerialBaud);
 
+  // Causa del reinicio: se lee antes de cualquier otra cosa para no perderla.
+  g_reset_reason_tag = cansat::reset_reason_tag();
+
+  // Power gating (circuito v.2): habilita los rieles base antes de sondear
+  // cualquier dispositivo. Con kPowerGatingEnabled=false no se toca ningun pin.
+  cansat::power_manager_init();
+
+  // LED de estado (E6): pines sin asignar todavia (Fase 5), no hace nada hasta
+  // que se definan en config.h.
+  cansat::status_output_init();
+
   pinMode(cansat::kPinMpu6050Int, INPUT);
   pinMode(cansat::kPinServoV3, OUTPUT);
 
-  // Inicializa bus I2C en GPIO 8/9 y verifica si los sensores estan ahi o en
-  // el bus alternativo (GPIO 13/14) cuando el BMP280 ocupa GPIO 8/9 por SPI.
+  // Bus I2C unico en GPIO 8/9 (BMP280, MPU-6050, INA219, FRAM y RTC).
+  // No se usa bus alternativo: GPIO13/14 son la UART de la Raspberry Pi.
   Wire.begin(cansat::kI2cSdaPin, cansat::kI2cSclPin, cansat::kI2cClockHz);
   g_i2c_bus = &Wire;
-
-  if (!i2c_probe_on(Wire, cansat::kMpu6050I2cAddress) &&
-      !i2c_probe_on(Wire, cansat::kIna219I2cAddress) &&
-      !i2c_probe_on(Wire, cansat::kFramI2cAddress)) {
-    Wire1.begin(cansat::kI2cAltSdaPin, cansat::kI2cAltSclPin,
-                cansat::kI2cClockHz);
-    if (i2c_probe_on(Wire1, cansat::kMpu6050I2cAddress) ||
-        i2c_probe_on(Wire1, cansat::kIna219I2cAddress) ||
-        i2c_probe_on(Wire1, cansat::kFramI2cAddress)) {
-      g_i2c_bus = &Wire1;
-    }
-  }
 
   g_mpu_available = init_mpu6050();
   g_baro_available = init_barometer();
@@ -1001,15 +1215,22 @@ void setup() {
   g_fram_available = init_fram();
   g_lis_available = init_lis3mdl();
   g_ads_available = init_ads1115();
+  // RTC antes de sondear las XIAO: si tiene hora valida, el reloj de mision
+  // arranca sincronizado y la telemetria sale con UTC desde el primer segundo.
+  init_rtc();
   init_xiao_cameras();
 
-  // UART1: GPS NEO-M8N (9600 8N1)
+  // UART1: GPS NEO-M8N (RX GPIO17, TX GPIO18, 9600 8N1)
   Serial1.begin(cansat::kGpsBaud, SERIAL_8N1, cansat::kGpsRxPin,
                 cansat::kGpsTxPin);
 
-  // UART2: XBee S1 Module + Raspberry Pi Zero W (115200 8N1)
-  Serial2.begin(cansat::kRadioAndRpiBaud, SERIAL_8N1, cansat::kRadioAndRpiRxPin,
-                cansat::kRadioAndRpiTxPin);
+  // UART2: XBee-PRO 900HP (RX GPIO15, TX GPIO16)
+  Serial2.begin(cansat::kXbeeBaud, SERIAL_8N1, cansat::kXbeeRxPin,
+                cansat::kXbeeTxPin);
+
+  // UART0 remapeada: Raspberry Pi Zero 2W (RX GPIO14, TX GPIO13)
+  g_rpi_serial.begin(cansat::kRpiBaud, SERIAL_8N1, cansat::kRpiRxPin,
+                     cansat::kRpiTxPin);
 
   if (g_baro_available) {
     float p = 0.0f;
@@ -1034,9 +1255,10 @@ void setup() {
   g_last_telemetry_ms = millis();
 
   Serial.println("=========================================================");
-  Serial.println("CanSat UTN FRRe - OBC ESP32-S3 (Circuito v3 - ISI 1)");
+  Serial.println("CanSat UTN FRRe - OBC ESP32-S3 (Circuito v.2 - ISI 1)");
   Serial.printf(
-      "IMU:%s BARO:%s INA219:%s FRAM:%s LIS3MDL:%s ADS1115:%s XIAO:%u/%u\n",
+      "IMU:%s BARO:%s INA219:%s FRAM:%s LIS3MDL:%s ADS1115:%s XIAO:%u/%u "
+      "PWR:%04X\n",
       g_mpu_available ? "MPU-6050" : "FAIL",
       g_baro.chip_id == 0x58
           ? (g_baro.transport == BaroTransport::Spi ? "BMP280-SPI"
@@ -1045,11 +1267,24 @@ void setup() {
       g_ina_available ? "OK" : "FAIL", g_fram_available ? "OK" : "RAM",
       g_lis_available ? "I2C" : "VIA-RPI",
       g_ads_available ? "I2C" : "VIA-RPI",
-      g_xiao_vis_available ? 1u : 0u, g_xiao_nir_available ? 1u : 0u);
+      g_xiao_vis_available ? 1u : 0u, g_xiao_nir_available ? 1u : 0u,
+      static_cast<unsigned>(cansat::power_manager_mask()));
+  Serial.printf("RTC:%s TSRC:%c RST:%c (%s)\n",
+                g_rtc_available ? (g_rtc_power_loss ? "PWR-LOST" : "OK")
+                                : "FAIL",
+                cansat::time_source_tag(g_clock.source()), g_reset_reason_tag,
+                cansat::reset_reason_name());
+  const bool watchdog_ok = cansat::watchdog_init();
+  Serial.printf("WDT:%s timeout=%lu ms\n", watchdog_ok ? "ON" : "FAIL",
+                static_cast<unsigned long>(cansat::kWatchdogTimeoutMs));
   Serial.println("=========================================================");
 }
 
 void loop() {
+  // Latido del Task Watchdog: si una vuelta de loop() tarda mas de
+  // kWatchdogTimeoutMs, el TWDT reinicia el OBC.
+  cansat::watchdog_feed();
+
   const uint32_t now = millis();
 
   SensorSample sample{};
@@ -1063,7 +1298,8 @@ void loop() {
   }
 
   poll_gps(now);
-  poll_radio_and_rpi(now);
+  poll_rpi_serial(now);
+  poll_radio_commands(now);
   poll_xiao_status();
 
   sample.gps_fix = g_gps.fix ? 1u : 0u;
@@ -1097,7 +1333,22 @@ void loop() {
 
   apply_sample(sample);
   update_flight_logic(now);
+  apply_power_policy(now);
+  service_deferred_probes(now);
   pulse_servo(now);
+
+  // Salud del OBC -> LED de estado (requisito E6). Los patrones se calculan en
+  // `flight_core/status.cpp` y se prueban en `native`; la actuacion fisica no
+  // toca ningun pin mientras kPinStatusLedOk/Fault sigan sin asignar.
+  SystemHealth health;
+  health.imu_ok = g_mpu_available;
+  health.baro_ok = g_baro_available;
+  health.ina_ok = g_ina_available;
+  health.fram_ok = g_fram_available;
+  health.rtc_ok = g_rtc_available;
+  health.rtc_power_loss = g_rtc_power_loss;
+  cansat::status_output_apply(
+      cansat::status_leds(cansat::status_severity(health), now));
 
   if (Serial.available() > 0) {
     char command_line[96];
@@ -1111,20 +1362,27 @@ void loop() {
     g_last_telemetry_ms += cansat::kTelemetryPeriodMs;
     g_packet_count = cansat::next_packet_count(g_packet_count);
 
+    const char clock_tag = cansat::time_source_tag(g_clock.source());
     if (g_rpi_payload_summary[0] != '\0') {
       std::snprintf(
           g_optional_buffer, sizeof(g_optional_buffer),
-          "MAX:%.1f;P2:%u;CMD:%s;RPI:%s", g_apogee.max_altitude_m(),
+          "MAX:%.1f;P2:%u;CMD:%s;RPI:%s;PWR:%04X;TSRC:%c;RST:%c",
+          g_apogee.max_altitude_m(),
           (g_apogee.second_parachute_triggered() || g_mechanism_activated) ? 1u
                                                                            : 0u,
-          g_last_cmd_echo, g_rpi_payload_summary);
+          g_last_cmd_echo, g_rpi_payload_summary,
+          static_cast<unsigned>(cansat::power_manager_mask()), clock_tag,
+          g_reset_reason_tag);
     } else {
       std::snprintf(
           g_optional_buffer, sizeof(g_optional_buffer),
-          "MAX:%.1f;P2:%u;CMD:%s", g_apogee.max_altitude_m(),
+          "MAX:%.1f;P2:%u;CMD:%s;PWR:%04X;TSRC:%c;RST:%c",
+          g_apogee.max_altitude_m(),
           (g_apogee.second_parachute_triggered() || g_mechanism_activated) ? 1u
                                                                            : 0u,
-          g_last_cmd_echo);
+          g_last_cmd_echo,
+          static_cast<unsigned>(cansat::power_manager_mask()), clock_tag,
+          g_reset_reason_tag);
     }
 
     const uint32_t mission_time_ms = g_mission_time_offset_ms + now;
@@ -1138,8 +1396,10 @@ void loop() {
     char line[384];
     cansat::format_telemetry_csv(g_frame, line, sizeof(line));
     Serial.println(line);
-    // Envia la trama de telemetria tambien por UART2 al XBee S1 y a la RPi Zero
+    // Telemetria por radio (XBee) y hacia la Raspberry Pi, que la usa para
+    // sincronizar sus capturas con el estado de vuelo.
     Serial2.println(line);
+    g_rpi_serial.println(line);
 
     persist_state(mission_time_ms);
   }

@@ -22,21 +22,31 @@ Bases del certamen, reglamento, Anexo A y requisitos técnicos.
 
 - [Propuesta Etapa 2 (borrador)](01-requisitos/propuesta-etapa-2-borrador.docx)
 - [Requisitos técnicos organizados](01-requisitos/requisitos-tecnicos-organizado.docx)
+- [Requisitos de competencia — síntesis operativa (Anexo A v2)](01-requisitos/requisitos-competencia-v2.md)
 - [Documentos de la competencia](01-requisitos/competencia/)
 
 ### 02-arquitectura
 
-Arquitectura general, diagramas de sistemas y propuesta de circuito.
+Arquitectura general, diagramas de sistemas y circuito vigente.
 
+- [Índice de arquitectura, circuito y alimentación](02-arquitectura/README.md)
+- [Circuito electrónico y alimentación v.2](02-arquitectura/circuito-electronico-y-alimentacion-v2.pdf) — **vigente**
+- [Diagrama del circuito v.2](02-arquitectura/diagramas/diagrama-circuito-alimentacion-v2.jpeg)
+- [Fuentes de hardware](02-arquitectura/fuentes/) — cuadro de conexionado y conexión de transistores
+- [Mapeo de componentes v.2](02-arquitectura/mapeo-componentes-v2.md)
+- [Pinmap ESP32-S3 v.2](02-arquitectura/pinmap-esp32s3-v2.md)
+- [Correcciones de conexionado y estado del firmware v.2](02-arquitectura/correcciones-conexionado-y-estado-firmware-v2.md)
 - [Diagramas de arquitectura y estados](02-arquitectura/diagramas/)
-- [Propuesta de circuito CanSat](02-arquitectura/propuesta-circuito-cansat.pdf) — borrador
-  preliminar; el controlador vigente es el ESP32-S3 (Elementos v2, C-002).
+- [Histórico de circuitos (archivo)](02-arquitectura/archivo/) — Propuesta 2 y v3, no usar
 
 ### 03-subsistemas
 
 Documentación por subsistema y responsabilidad.
 
 - [Software de vuelo — ISI 1](03-subsistemas/software-vuelo/README.md)
+- [Power gating del OBC (circuito v.2)](03-subsistemas/software-vuelo/power-gating-v2.md)
+- [Tiempo de misión y RTC](03-subsistemas/software-vuelo/tiempo-mision-v2.md)
+- [Indicadores, watchdog y reinicios](03-subsistemas/software-vuelo/indicadores-v2.md)
 - [Determinación de actitud — ISI 1](03-subsistemas/actitud/README.md)
 - [Software de misión secundaria — ISI 1](03-subsistemas/secundaria/README.md)
 - [Comunicaciones — IEM 3 / ISI 2](03-subsistemas/comunicaciones/)

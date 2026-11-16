@@ -10,6 +10,8 @@ enum class CommandType : uint8_t {
   SetTime = 2,
   CalibrateAltitude = 3,
   ActivateMechanism = 4,
+  RpiOn = 5,
+  RpiOff = 6,
 };
 
 CommandType parse_command(const char* line);

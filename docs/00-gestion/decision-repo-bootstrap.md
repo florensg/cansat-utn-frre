@@ -9,8 +9,8 @@
 El equipo necesitaba un lugar común para documentación, firmware, estación terrena,
 hardware y datasheets. El material estaba disperso en carpetas locales, con documentos
 duplicados, nombres inconsistentes y archivos muy pesados. Además, la carpeta
-`Documentación/` y el archivo `Datos Participantes.xlsx` contienen DNIs, fechas de
-nacimiento y correos, que no deben versionarse.
+`Documentación/` contiene DNIs, fechas de nacimiento y correos (incluido
+`Datos Participantes.xlsx`), que no deben versionarse.
 
 ## Decisión
 
@@ -18,7 +18,7 @@ nacimiento y correos, que no deben versionarse.
    `cansat-utn-frre`.
 2. Organizar el contenido en `docs/`, `firmware/`, `gcs/`, `hardware/` y `datasheets/`.
 3. Excluir del repositorio:
-   - `Documentación/` y `Datos Participantes.xlsx` por datos personales.
+   - `Documentación/` (incluye `Datos Participantes.xlsx`) por datos personales.
    - `Ignorar (Basura)/` por material descartado.
    - El RAR de Proteus de 462 MB por tamaño.
    - Backups y workspaces de Proteus.
