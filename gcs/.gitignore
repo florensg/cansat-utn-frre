@@ -1,0 +1,13 @@
+# Entorno virtual y caché de pruebas
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+
+# Logs de vuelo y salidas locales generadas en pruebas/ejecución
+mission_logs/
+post_flight_output/
+demo_nir/
+test_nir_report/
+test_nir_samples/
+*.log

@@ -24,7 +24,10 @@ Cuando descubras un termino del dominio nuevo:
 
 | Termino canonico | Definicion | Sinonimos prohibidos |
 |------------------|------------|----------------------|
-| _completar con terminos del dominio_ |   |   |
+| `PACKET_COUNT` | Contador monotónico de paquetes transmitidos por el OBC (persistido en FRAM, requisito F1). | `RX_COUNT`, `paquetes recibidos` |
+| `RX_COUNT` | Conteo independiente de paquetes recibidos y validados con éxito en la Estación Terrena (requisito G14). | `PACKET_COUNT`, `paquetes transmitidos` |
+| `OPTIONAL_DATA` | Columna 32 (índice base 0) de la trama CSV de 33 campos que transporta `MAX`, `P2`, `CMD` y el resumen `$RPI`. | `extra_data`, `payload_tail` |
+| `Ventana Silenciosa UART` | Ventana de ~800 ms posterior a la recepción del paquete de 1 Hz (con guarda de 60 ms) usada por la GCS para enviar telecomandos sin colisión RF. | `envío asíncrono libre` |
 
 ## Reglas de uso
 
