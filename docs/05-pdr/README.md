@@ -5,11 +5,18 @@ Universitario 2026-2027.
 
 ## Documentos
 
+Los documentos de la PDR **no se versionan** (son material del equipo y se
+distribuyen por el Drive). Se dejan las rutas locales de referencia:
+
 | Archivo | Qué es |
 |---|---|
-| [`pdr-yvysat-v3.pdf`](pdr-yvysat-v3.pdf) | PDR del equipo **YVYSAT**, versión 3 — documento de la revisión |
-| [`guia-armado-pdr-yvysat.pdf`](guia-armado-pdr-yvysat.pdf) | Guía de armado de la PDR: orden de las secciones y qué evidencia va en cada una |
-| [`PDR Template - V2.pptx`](../01-requisitos/competencia/Modelos/PDR%20Template%20-%20V2.pptx) | Plantilla oficial de la competencia |
+| `pdr-yvysat-v3.pdf` | PDR del equipo **YVYSAT**, versión 3 — documento de la revisión |
+| `guia-armado-pdr-yvysat.pdf` | Guía de armado de la PDR: orden de secciones y qué evidencia va en cada una |
+| [`PDR Template - V2.pptx`](../01-requisitos/competencia/Modelos/PDR%20Template%20-%20V2.pptx) | Plantilla oficial de la competencia (esta sí se versiona) |
+
+> Los dos PDF están en `.gitignore` (`docs/05-pdr/*.pdf`). Si no los tenés en
+> local, pedilos al Drive del equipo: sin ellos el checklist de abajo no se puede
+> completar.
 
 ## Checklist por subsistema
 

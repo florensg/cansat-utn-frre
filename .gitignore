@@ -48,3 +48,6 @@ __pycache__/
 .cortex/vault/sessions/
 .cortex/.cortex/
 .cortex/session.lock
+
+# Material de la PDR: documentos del equipo, no se versionan
+docs/05-pdr/*.pdf
