@@ -12,6 +12,7 @@ distribuyen por el Drive). Se dejan las rutas locales de referencia:
 |---|---|
 | `pdr-yvysat-v3.pdf` | PDR del equipo **YVYSAT**, versión 3 — documento de la revisión |
 | `guia-armado-pdr-yvysat.pdf` | Guía de armado de la PDR: orden de secciones y qué evidencia va en cada una |
+| [`presentacion-flor-gonzalez.md`](presentacion-flor-gonzalez.md) | Guía del bloque de software de vuelo (slides 69-71 + FSW-A): contenido por slide, guion oral y evidencia |
 | [`PDR Template - V2.pptx`](../01-requisitos/competencia/Modelos/PDR%20Template%20-%20V2.pptx) | Plantilla oficial de la competencia (esta sí se versiona) |
 
 > Los dos PDF están en `.gitignore` (`docs/05-pdr/*.pdf`). Si no los tenés en
