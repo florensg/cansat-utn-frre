@@ -3,6 +3,14 @@
 Material, checklist y evidencias para la revisión preliminar de diseño del CanSat
 Universitario 2026-2027.
 
+## Documentos
+
+| Archivo | Qué es |
+|---|---|
+| [`pdr-yvysat-v3.pdf`](pdr-yvysat-v3.pdf) | PDR del equipo **YVYSAT**, versión 3 — documento de la revisión |
+| [`guia-armado-pdr-yvysat.pdf`](guia-armado-pdr-yvysat.pdf) | Guía de armado de la PDR: orden de las secciones y qué evidencia va en cada una |
+| [`PDR Template - V2.pptx`](../01-requisitos/competencia/Modelos/PDR%20Template%20-%20V2.pptx) | Plantilla oficial de la competencia |
+
 ## Checklist por subsistema
 
 ### Software de vuelo — ISI 1
